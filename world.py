@@ -13,12 +13,10 @@ class SystemExistsError(Exception):
     pass
 
 
-TSystem = TypeVar("TSystem", bound=BaseSystem)
-
-
 class World:
     __current_id = 0
     __slots__ = ("__id", "__entity_manager", "__systems")
+    TSystem = TypeVar("TSystem", bound=BaseSystem)
 
     def __init__(self):
         self.__id = World.__current_id
