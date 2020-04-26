@@ -44,7 +44,6 @@ class World:
         system = system_type()
         system.is_enabled = True
         self.__systems.add(system)
-        system.on_create()
         return system
 
     def get_or_create_system(self, system_type: Generic[TSystem]) -> TSystem:

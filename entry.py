@@ -11,15 +11,17 @@ class TestComponentB(BaseComponent):
 
 
 class TestSystem(BaseSystem):
+    __slots__ = ("__secret_value",)
 
-    def on_create(self):
+    def __init__(self):
+        self.__secret_value = 7.5
         print("System created.")
 
     def on_update(self, entity_manager: EntityManager):
         for i in entity_manager.get_entities().filter(TestComponentA, TestComponentB):
             a_comp = i.get_component(TestComponentA)
             b_comp = i.get_component(TestComponentB)
-            b_comp.b = b_comp.b + a_comp.a
+            b_comp.b = b_comp.b + a_comp.a / self.__secret_value
         print("System updated.")
 
 

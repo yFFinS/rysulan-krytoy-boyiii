@@ -6,9 +6,5 @@ class BaseSystem(ABC):
     __slots__ = ("is_enabled",)
 
     @abstractmethod
-    def on_create(self):
-        pass
-
-    @abstractmethod
     def on_update(self, entity_manager: EntityManager):
         raise NotImplementedError()
