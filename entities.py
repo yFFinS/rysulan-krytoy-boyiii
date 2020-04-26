@@ -1,4 +1,4 @@
-from typing import Dict, Set, List, Type, Generic, TypeVar
+from typing import Dict, Set, List, Type
 from component import BaseComponent
 
 
@@ -26,13 +26,12 @@ class EntityExistsError(Exception):
 
 class DataFilter:
     __slots__ = ("entity", "components")
-    TComponent = TypeVar("TComponent", bound=BaseComponent)
 
     def __init__(self, entity: Entity, component: List[BaseComponent]):
         self.entity = entity
         self.components = component
 
-    def get_component(self, component_type: Type[Generic[TComponent]]) -> BaseComponent:
+    def get_component(self, component_type: Type[BaseComponent]) -> BaseComponent:
         for existing_component in self.components:
             if type(existing_component) == component_type:
                 return existing_component

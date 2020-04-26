@@ -1,18 +1,42 @@
 from entities import *
-
-manager = EntityManager()
-entity = manager.create_entity()
+from world import *
 
 
-class TestComponent(BaseComponent):
+class TestComponentA(BaseComponent):
     __slots__ = ("a",)
 
 
-comp = TestComponent()
-comp.a = 2
-manager.add_component(entity, comp)
-for i in manager.get_entities().filter(TestComponent):
-    c = i.get_component(TestComponent)
-    c.a = 3
-    print(c.a)
-print(comp.a)
+class TestComponentB(BaseComponent):
+    __slots__ = ("b",)
+
+
+class TestSystem(BaseSystem):
+
+    def on_create(self):
+        print("System created.")
+
+    def on_update(self, entity_manager: EntityManager):
+        for i in entity_manager.get_entities().filter(TestComponentA, TestComponentB):
+            a_comp = i.get_component(TestComponentA)
+            b_comp = i.get_component(TestComponentB)
+            b_comp.b = b_comp.b + a_comp.a
+        print("System updated.")
+
+
+world = World()
+world.create_system(TestSystem)
+manager = world.get_manager()
+entity1 = manager.create_entity()
+entity2 = manager.create_entity()
+entity3 = manager.create_entity()
+manager.add_component(entity1, TestComponentA())
+manager.add_component(entity2, TestComponentB())
+comp_a = TestComponentA()
+comp_a.a = 10
+comp_b = TestComponentB()
+comp_b.b = 6
+manager.add_component(entity3, comp_a)
+manager.add_component(entity3, comp_b)
+
+world.update_systems()
+print(comp_b.b)
