@@ -1,9 +1,10 @@
-from typing import Dict, Set
+from typing import Dict, Set, List, Type
 from component import BaseComponent
 
 
 class Entity:
     __current_id = 0
+    __slots__ = ("__id",)
 
     def __init__(self):
         self.__id = Entity.__current_id
@@ -23,43 +24,72 @@ class EntityExistsError(Exception):
     pass
 
 
+class DataFilter:
+    __slots__ = ("entity", "components")
+
+    def __init__(self, entity: Entity, component: List[BaseComponent]):
+        self.entity = entity
+        self.components = component
+
+    def get_component(self, component: Type[BaseComponent]) -> BaseComponent:
+        for i in self.components:
+            if type(i) == component:
+                return i
+
+
 class EntityContainer:
+    __slots__ = ("__data",)
 
     def __init__(self):
-        self.__data: Dict[int, Set[BaseComponent]] = {}
+        self.__data: Dict[Entity, Set[BaseComponent]] = {}
 
     def __getitem__(self, item):
         return self.__data[item]
 
-    def __has_entity(self, entity: Entity) -> bool:
-        return entity.get_id() in self.__data
+    def has_entity(self, entity: Entity) -> bool:
+        return entity in self.__data
 
     def add_entity(self, entity: Entity) -> None:
-        if not self.__has_entity(entity):
-            self.__data[entity.get_id()] = set()
+        if not self.has_entity(entity):
+            self.__data[entity] = set()
         else:
-            raise
+            raise EntityExistsError()
 
     def remove_entity(self, entity: Entity) -> None:
-        if self.__has_entity(entity):
-            self.__data.pop(entity.get_id())
+        if self.has_entity(entity):
+            self.__data.pop(entity)
         else:
             raise EntityNotFoundError()
 
     def add_entity_data(self, entity: Entity, data: BaseComponent) -> None:
-        if self.__has_entity(entity):
-            self.__data[entity.get_id()].add(data)
+        if self.has_entity(entity):
+            self.__data[entity].add(data)
         else:
             raise EntityNotFoundError()
 
     def remove_entity_data(self, entity: Entity, data: BaseComponent) -> None:
-        if self.__has_entity(entity):
-            self.__data[entity.get_id()].discard(data)
+        if self.has_entity(entity):
+            self.__data[entity].discard(data)
         else:
             raise EntityNotFoundError()
 
+    def filter(self, *args: Type[BaseComponent]) -> Set[DataFilter]:
+        output = set()
+        filter_by = [i for i in args]
+        for entity, data in self.__data.items():
+            temp = []
+            for component in data:
+                if type(component) in filter_by:
+                    temp.append(component)
+            if len(temp) == len(filter_by):
+                data_filter = DataFilter(entity, temp)
+                output.add(data_filter)
+
+        return output
+
 
 class EntityManager:
+    __slots__ = ("__container",)
 
     def __init__(self):
         self.__container = EntityContainer()
@@ -77,4 +107,7 @@ class EntityManager:
 
     def remove_component(self, entity: Entity, component: BaseComponent) -> None:
         self.__container.remove_entity_data(entity, component)
+
+    def get_entities(self) -> EntityContainer:
+        return self.__container
 
