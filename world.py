@@ -1,6 +1,7 @@
 from entities import EntityManager
 from systems import BaseSystem
 from typing import Set, Generic, TypeVar
+from profiling import profiled
 
 
 class SystemNotExistsError(Exception):
@@ -14,6 +15,7 @@ class SystemExistsError(Exception):
 
 
 class World:
+    current_world: "World" = None
     __current_id = 0
     __slots__ = ("__id", "__entity_manager", "__systems")
     TSystem = TypeVar("TSystem", bound=BaseSystem)
@@ -25,18 +27,23 @@ class World:
         self.__entity_manager = EntityManager()
         self.__systems: Set[BaseSystem] = set()
 
+        if World.current_world is None:
+            World.current_world = self
+
     def get_id(self) -> int:
         return self.__id
 
     def get_manager(self) -> EntityManager:
         return self.__entity_manager
 
+    @profiled
     def get_system(self, system_type: Generic[TSystem]) -> TSystem:
         for existing_system in self.__systems:
             if type(existing_system) == system_type:
                 return existing_system
         raise SystemNotExistsError()
 
+    @profiled
     def create_system(self, system_type: Generic[TSystem]) -> TSystem:
         if system_type in map(type, self.__systems):
             raise NotImplementedError()
@@ -46,19 +53,25 @@ class World:
         self.__systems.add(system)
         return system
 
+    @profiled
     def get_or_create_system(self, system_type: Generic[TSystem]) -> TSystem:
         try:
             return self.get_system(system_type)
         except SystemNotExistsError:
             return self.create_system(system_type)
 
+    @profiled
     def remove_system(self, system_type: Generic[TSystem]) -> None:
         self.__systems.remove(self.get_system(system_type))
 
     def set_system_state(self, system_type: Generic[TSystem], enabled: bool) -> None:
         self.get_system(system_type).is_enabled = enabled
 
-    def update_systems(self) -> None:
+    def update(self) -> None:
         for system in self.__systems:
             if system.is_enabled:
-                system.on_update(self.__entity_manager)
+                profiled(system.on_update)(self.__entity_manager)
+
+    @staticmethod
+    def update_current() -> None:
+        World.current_world.update()

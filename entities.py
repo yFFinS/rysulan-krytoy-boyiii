@@ -1,5 +1,6 @@
 from typing import Dict, Set, List, Type, Generic, TypeVar
 from component import BaseComponent
+from profiling import profiled
 
 
 class Entity:
@@ -32,6 +33,7 @@ class DataFilter:
         self.entity = entity
         self.components = component
 
+    @profiled
     def get_component(self, component_type: Generic[TComponent]) -> TComponent:
         for existing_component in self.components:
             if type(existing_component) == component_type:
@@ -50,30 +52,35 @@ class EntityContainer:
     def has_entity(self, entity: Entity) -> bool:
         return entity in self.__data
 
+    @profiled
     def add_entity(self, entity: Entity) -> None:
         if not self.has_entity(entity):
             self.__data[entity] = set()
         else:
             raise EntityExistsError()
 
+    @profiled
     def remove_entity(self, entity: Entity) -> None:
         if self.has_entity(entity):
             self.__data.pop(entity)
         else:
             raise EntityNotFoundError()
 
+    @profiled
     def add_entity_data(self, entity: Entity, data: BaseComponent) -> None:
         if self.has_entity(entity):
             self.__data[entity].add(data)
         else:
             raise EntityNotFoundError()
 
+    @profiled
     def remove_entity_data(self, entity: Entity, data: BaseComponent) -> None:
         if self.has_entity(entity):
             self.__data[entity].discard(data)
         else:
             raise EntityNotFoundError()
 
+    @profiled
     def filter(self, *filter_by: Type[BaseComponent]) -> Set[DataFilter]:
         output = set()
         for entity, data in self.__data.items():

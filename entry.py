@@ -1,5 +1,6 @@
 from entities import *
 from world import *
+from profiling import Profiler
 
 
 class TestComponentA(BaseComponent):
@@ -11,7 +12,6 @@ class TestComponentB(BaseComponent):
 
 
 class TestSystem(BaseSystem):
-    __slots__ = ("__secret_value",)
 
     def __init__(self):
         self.__secret_value = 7.5
@@ -22,8 +22,11 @@ class TestSystem(BaseSystem):
             a_comp = i.get_component(TestComponentA)
             b_comp = i.get_component(TestComponentB)
             b_comp.b = b_comp.b + a_comp.a / self.__secret_value
+            print(f"Entity {i.entity.get_id()} updated.")
         print("System updated.")
 
+
+Profiler.begin_profile_session()
 
 world = World()
 world.create_system(TestSystem)
@@ -40,5 +43,7 @@ comp_b.b = 6
 manager.add_component(entity3, comp_a)
 manager.add_component(entity3, comp_b)
 
-world.update_systems()
+World.update_current()
 print(comp_b.b)
+
+Profiler.end_profile_session()

@@ -2,4 +2,4 @@ from abc import ABC
 
 
 class BaseComponent(ABC):
-    pass
+    __slots__ = ()

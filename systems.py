@@ -1,8 +1,8 @@
-from entities import EntityManager
 from abc import ABC, abstractmethod
 
 
 class BaseSystem(ABC):
+    from entities import EntityManager
     __slots__ = ("is_enabled",)
 
     @abstractmethod
