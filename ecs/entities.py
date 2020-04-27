@@ -1,5 +1,5 @@
 from typing import Dict, Set, List, Type, Generic, TypeVar
-from component import BaseComponent
+from ecs.component import BaseComponent
 from profiling import profiled
 
 

@@ -1,7 +1,8 @@
-from entities import EntityManager
-from systems import BaseSystem
+from ecs.entities import EntityManager
+from ecs.systems import BaseSystem
 from typing import Set, Generic, TypeVar
 from profiling import profiled
+from main_timer import Time
 
 
 class SystemNotExistsError(Exception):
@@ -15,6 +16,7 @@ class SystemExistsError(Exception):
 
 
 class World:
+    default_world: "World" = None
     current_world: "World" = None
     __current_id = 0
     __slots__ = ("__id", "__entity_manager", "__systems")
@@ -68,9 +70,10 @@ class World:
         self.get_system(system_type).is_enabled = enabled
 
     def update(self) -> None:
+        delta_time = Time.get_delta_time()
         for system in self.__systems:
             if system.is_enabled:
-                profiled(system.on_update)(self.__entity_manager)
+                profiled(system.on_update)(self.__entity_manager, delta_time)
 
     @staticmethod
     def update_current() -> None:
