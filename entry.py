@@ -1,6 +1,8 @@
 from application import Application
 from ecs.world import World
+from simulation.systems import *
 from simulation.utils import create_rect
+import vk_bot.client
 
 
 app = Application()
@@ -16,4 +18,5 @@ for x in range(0, 100):
         manager.add_component(entity, sprite_comp)
         manager.add_component(entity, pos_comp)
 
+vk_bot.client.init()
 app.run(True, True)
