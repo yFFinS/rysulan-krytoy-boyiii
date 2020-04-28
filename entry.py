@@ -1,6 +1,5 @@
 from application import Application
 from ecs.world import World
-from simulation.systems import *
 from simulation.utils import create_rect
 
 
