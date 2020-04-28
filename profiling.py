@@ -1,6 +1,7 @@
 from time import time
 from datetime import datetime
-from typing import Callable, Dict, Tuple, Any
+from os import remove, listdir
+from typing import Callable, Dict, Tuple
 from os import makedirs, path
 
 
@@ -42,10 +43,17 @@ class Profiler:
             Profiler.__session_data[func_name] = (current_data[0] + 1, current_data[1] + time() - start_time)
         return result
 
+    @staticmethod
+    def clear_log() -> None:
+        for filename in listdir(Profiler.PROFILING_RESULT_DIRECTORY):
+            file_path = path.join(Profiler.PROFILING_RESULT_DIRECTORY, filename)
+            try:
+                remove(file_path)
+            except Exception as e:
+                print(f"Failed to delete {file_path}. Reason: {e}")
+
 
 def profiled(func: Callable):
     def wrapper(*args, **kwargs):
         return Profiler.profile(func, *args, **kwargs)
     return wrapper
-
-
