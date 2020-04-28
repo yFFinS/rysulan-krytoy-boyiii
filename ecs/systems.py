@@ -2,9 +2,11 @@ from abc import ABC, abstractmethod
 
 
 class BaseSystem(ABC):
-    from ecs.entities import EntityManager
-    __slots__ = ("is_enabled",)
+    __slots__ = ("is_enabled", "entity_manager")
+
+    def on_create(self):
+        pass
 
     @abstractmethod
-    def on_update(self, entity_manager: EntityManager, delta_time: float):
+    def on_update(self, delta_time: float):
         raise NotImplementedError()
