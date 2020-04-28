@@ -26,15 +26,15 @@ class EntityExistsError(Exception):
 
 
 class DataFilter:
-    TComponent = TypeVar("TComponent", bound=BaseComponent)
     __slots__ = ("entity", "components")
+    TComponent = TypeVar("TComponent", bound=BaseComponent)
 
     def __init__(self, entity: Entity, component: List[BaseComponent]):
         self.entity = entity
         self.components = component
 
     @profiled
-    def get_component(self, component_type: Type[TComponent]) -> TComponent:
+    def get_component(self, component_type: Generic[TComponent]) -> TComponent:
         for existing_component in self.components:
             if type(existing_component) == component_type:
                 return existing_component
