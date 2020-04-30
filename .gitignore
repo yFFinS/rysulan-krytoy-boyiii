@@ -128,4 +128,4 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-vk_bot/token.txt
+vk_bot/bot.properties
