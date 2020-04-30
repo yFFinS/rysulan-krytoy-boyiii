@@ -1,34 +1,33 @@
-import vk_api
-import vk_api.longpoll
+from vk_api import vk_api, VkApi
+from vk_api.bot_longpoll import VkBotLongPoll, VkBotEvent
 
 
-TOKEN_FILE_PATH = "vk_bot/token.txt"
+PROPERTIES_FILE_PATH = "vk_bot/bot.properties"
 
 
 class Client:
-    __slots__ = ("__session", "__api", "__longpoll")
-    __session: vk_api.VkApi
-    __api: vk_api.vk_api.VkApiMethod
-    __longpoll: vk_api.longpoll.VkLongPoll
+    __slots__ = ("__session", "__api", "__long_poll", "__group_id")
+    __session: VkApi
+    __api: vk_api.VkApiMethod
+    __long_poll: VkBotLongPoll
+    __group_id: int
 
     def __init__(self):
-        with open(TOKEN_FILE_PATH, "r") as file:
+        with open(PROPERTIES_FILE_PATH, "r") as file:
             for line in file.readlines():
-                line = line.strip()
-                if " " in line or not line:
-                    continue
-                print(line)
-                self.__session = vk_api.VkApi(token=line)
-                self.__api = self.__session.get_api()
-                self.__longpoll = vk_api.longpoll.VkLongPoll(self.__session)
-                return
-            print("Token not found.")
+                line_data = line.strip().split()
+                if "group_id" in line:
+                    self.__group_id = int(line_data[-1])
+                if "token" in line:
+                    self.__session = VkApi(token=line_data[-1])
+            self.__api = self.__session.get_api()
+            self.__long_poll = VkBotLongPoll(self.__session, self.__group_id)
 
     def send_message(self, chat_id: int, message: str) -> None:
         self.__api.messages.send(chat_id=chat_id, message=message)
 
     def listen(self) -> None:
-        for event in self.__longpoll.listen():
+        for event in self.__long_poll.listen():
             pass
 
 
