@@ -15,7 +15,7 @@ class Client:
     def __init__(self):
         with open(PROPERTIES_FILE_PATH, "r") as file:
             for line in file.readlines():
-                line_data = line.strip().split()
+                line_data = line.strip().split("=")
                 if "group_id" in line:
                     self.__group_id = int(line_data[-1])
                 if "token" in line:
