@@ -2,6 +2,7 @@ import pygame
 from profiling import Profiler
 from ecs.world import World
 from main_timer import Time
+import os
 
 
 WIDTH, HEIGHT = 800, 600
@@ -47,6 +48,7 @@ class Application:
         if profile:
             Profiler.end_profile_session()
         pygame.quit()
+        os._exit(0)
 
     @staticmethod
     def get_render_surface():
