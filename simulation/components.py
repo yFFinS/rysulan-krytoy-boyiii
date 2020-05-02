@@ -1,5 +1,6 @@
 from ecs.component import BaseComponent
 from simulation.math import *
+import sqlalchemy as sa
 
 
 class RenderSprite(BaseComponent):
@@ -8,4 +9,3 @@ class RenderSprite(BaseComponent):
 
 class Position(BaseComponent):
     __slots__ = ("value",)
-    value: Vector
