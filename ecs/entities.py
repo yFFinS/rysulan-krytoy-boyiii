@@ -1,4 +1,4 @@
-from typing import Dict, Set, List, Type, Generic, TypeVar
+from typing import Dict, List, Type, Generic, TypeVar, Callable, Set, Tuple
 from ecs.component import BaseComponent
 from profiling import profiled
 
@@ -95,11 +95,42 @@ class EntityContainer:
         return output
 
 
+class BufferedCommand:
+    __slots__ = ("command", "args", "kwargs")
+
+    def __init__(self, command: Callable, *args, **kwargs):
+        self.command = command
+        self.args = args
+        self.kwargs = kwargs
+
+    def execute(self) -> None:
+        self.command(*self.args, **self.kwargs)
+
+
+class CommandBuffer:
+    __slots__ = ("__commands",)
+    __commands: Set[BufferedCommand]
+
+    def __init__(self):
+        self.__commands = set()
+
+    def add_command(self, command: Callable, *args, **kwargs) -> None:
+        self.__commands.add(BufferedCommand(command, *args, **kwargs))
+
+    def execute_commands(self) -> None:
+        for command in self.__commands:
+            command.execute()
+        self.__commands.clear()
+
+
 class EntityManager:
-    __slots__ = ("__container",)
+    __slots__ = ("__container", "__command_buffer")
+    __container: EntityContainer
+    __command_buffer: CommandBuffer
 
     def __init__(self):
         self.__container = EntityContainer()
+        self.__command_buffer = CommandBuffer()
 
     def create_entity(self) -> Entity:
         entity = Entity()
@@ -118,3 +149,8 @@ class EntityManager:
     def get_entities(self) -> EntityContainer:
         return self.__container
 
+    def add_command(self, command: Callable, *args, **kwargs) -> None:
+        self.__command_buffer.add_command(command, *args, **kwargs)
+
+    def release_buffer(self) -> None:
+        self.__command_buffer.execute_commands()

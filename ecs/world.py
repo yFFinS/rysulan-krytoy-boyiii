@@ -46,7 +46,7 @@ class World:
         raise SystemNotExistsError()
 
     @profiled
-    def create_system(self, system_type: Type[TSystem]) -> TSystem:
+    def create_system(self, system_type: type) -> TSystem:
         if system_type in map(type, self.__systems):
             raise SystemExistsError()
 
@@ -76,6 +76,7 @@ class World:
         for system in self.__systems:
             if system.is_enabled:
                 profiled(system.on_update)(delta_time)
+        self.__entity_manager.release_buffer()
 
     @staticmethod
     def update_current() -> None:
