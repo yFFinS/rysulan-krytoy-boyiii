@@ -1,4 +1,10 @@
+from random import randint
+
 from pygame import sprite, Surface, draw
+
+from ecs.world import World
+from .math import Vector
+from .settings import *
 
 
 def create_rect(width: int, height: int, fill_color, border_color=None, border_width=1):
@@ -9,3 +15,21 @@ def create_rect(width: int, height: int, fill_color, border_color=None, border_w
     if border_color is not None:
         draw.rect(rect_sprite.image, border_color, (0, 0, width, height), border_width)
     return rect_sprite
+
+
+def __delayed_create_creature(entity_manager):
+    from .components import Position, RenderSprite
+    entity = entity_manager.create_entity()
+    pos_comp = Position()
+    pos_comp.value = Vector(randint(-WORLD_SIZE, WORLD_SIZE), randint(-WORLD_SIZE, WORLD_SIZE))
+    render_comp = RenderSprite()
+    render_comp.sprite = create_rect(START_CREATURE_SIZE, START_CREATURE_SIZE, START_CREATURE_COLOR,
+                                     CREATURE_BORDER_COLOR, CREATURE_BORDER_WIDTH)
+    entity_manager.add_component(entity, pos_comp)
+    entity_manager.add_component(entity, render_comp)
+
+
+def create_creature() -> None:
+    entity_manager = World.current_world.get_manager()
+
+    entity_manager.add_command(__delayed_create_creature, entity_manager)

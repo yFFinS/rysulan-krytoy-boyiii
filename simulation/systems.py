@@ -19,6 +19,8 @@ class RenderSystem(BaseSystem):
     def on_update(self, delta_time: float):
         for i in self.entity_manager.get_entities().filter(RenderSprite, Position):
             render_comp = i.get_component(RenderSprite)
+            if not render_comp.sprite.groups():
+                self.__sprites.add(render_comp.sprite)
             position_comp = i.get_component(Position)
             render_comp.sprite.rect.center = position_comp.value.to_tuple()
         self.__sprites.draw(self.render_surface)

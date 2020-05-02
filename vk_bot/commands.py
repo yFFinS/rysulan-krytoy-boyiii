@@ -20,7 +20,6 @@ class BotMethods:
 
 
 class BaseCommand(ABC):
-
     __slots__ = ()
     _name: str = None
     _description: str = None
@@ -57,3 +56,20 @@ class HelloCommand(BaseCommand):
 
     def on_call(self, data: dict, methods: BotMethods) -> None:
         methods.send_message(data["peer_id"], "hello " + data["text"])
+
+
+class CreateEntitiesCommand(BaseCommand):
+    _name = "create"
+    _event_data = ("text", "peer_id")
+    _description = ""
+
+    def on_call(self, data: dict, methods: BotMethods) -> None:
+        count = data["text"]
+        from simulation.utils import create_creature
+        try:
+            for i in range(int(count)):
+                create_creature()
+            methods.send_message(data["peer_id"], f"Создано {count} существ.")
+        except TypeError as e:
+            print(e)
+            methods.send_message(data["peer_id"], "Неправильный формат ввода.")
