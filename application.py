@@ -2,6 +2,7 @@ import pygame
 from profiling import Profiler
 from ecs.world import World
 from main_timer import Time
+from input import Mouse
 import os
 
 
@@ -11,7 +12,7 @@ BACKGROUND_COLOR = (0, 0, 0)
 
 class Application:
     __slots__ = ("__screen", "__is_running", "__clock")
-    __instance: "Application" = None
+    __instance = None
 
     def __init__(self):
 
@@ -34,19 +35,24 @@ class Application:
         while self.__is_running:
             self.__screen.fill(BACKGROUND_COLOR)
 
-            World.update_current()
             for event in pygame.event.get():
+                Mouse.handle_event(event)
                 if event.type == pygame.QUIT:
                     self.__is_running = False
                     break
+
+            World.update_current()
+
             pygame.display.flip()
             Time.tick()
+
             pygame.display.set_caption(str(int(Time.get_fps())))
 
         if clear_log:
             Profiler.clear_log()
         if profile:
             Profiler.end_profile_session()
+
         pygame.quit()
         os._exit(0)
 
