@@ -85,4 +85,7 @@ class World:
     def create_all_systems(self) -> None:
         from ecs.systems import BaseSystem
         for system_type in BaseSystem.__subclasses__():
-            self.create_system(system_type)
+            try:
+                self.create_system(system_type)
+            except SystemExistsError:
+                pass
