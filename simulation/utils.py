@@ -1,8 +1,5 @@
 from random import randint
-
 from pygame import sprite, Surface, draw
-
-from ecs.world import World
 from .math import Vector
 from .settings import *
 from ecs.entities import Entity, EntityManager

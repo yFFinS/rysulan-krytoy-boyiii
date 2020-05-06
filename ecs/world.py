@@ -83,7 +83,7 @@ class World:
         World.current_world.update()
 
     def create_all_systems(self) -> None:
-        from ecs.systems import BaseSystem
+        import simulation.__all_systems
         for system_type in BaseSystem.__subclasses__():
             try:
                 self.create_system(system_type)
