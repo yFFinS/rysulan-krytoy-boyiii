@@ -1,4 +1,4 @@
-TARGET_FPS = 60
+TARGET_FPS = 100
 
 
 class Time:
