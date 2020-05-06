@@ -1,4 +1,4 @@
-from typing import Dict, List, Type, Generic, TypeVar, Callable, Set, Tuple
+from typing import Dict, List, Type, TypeVar, Callable, Set
 from ecs.component import BaseComponent
 from profiling import profiled
 
@@ -25,19 +25,53 @@ class EntityExistsError(Exception):
     pass
 
 
-class DataFilter:
+class ComponentNotFoundError(Exception):
+    """Raised when component does not exists within entity"""
+    pass
+
+
+TComponent = TypeVar("TComponent", bound=BaseComponent)
+
+
+class ComponentDataArray:
     __slots__ = ("entity", "components")
-    TComponent = TypeVar("TComponent", bound=BaseComponent)
 
     def __init__(self, entity: Entity, component: List[BaseComponent]):
         self.entity = entity
         self.components = component
 
     @profiled
-    def get_component(self, component_type: Generic[TComponent]) -> TComponent:
+    def get_component(self, component_type: Type[TComponent]) -> TComponent:
         for existing_component in self.components:
             if type(existing_component) == component_type:
                 return existing_component
+
+
+class ComponentDataFilter:
+    __slots__ = ("required", "without", "additional")
+
+    def __init__(self, required, without=(), additional=()):
+        self.required = required
+        self.without = without
+        self.additional = additional
+
+    def filter(self, data: Dict[Entity, Set[BaseComponent]]) -> Set[ComponentDataArray]:
+        output = set()
+        for entity, components in data.items():
+            temp = []
+            required_count = 0
+            for component in components:
+                if type(component) in self.without:
+                    temp.clear()
+                    break
+                elif type(component) in self.required:
+                    required_count += 1
+                    temp.append(component)
+                elif type(component) in self.additional:
+                    temp.append(component)
+            if required_count == len(self.required) and temp:
+                output.add(ComponentDataArray(entity, temp))
+        return output
 
 
 class EntityContainer:
@@ -52,28 +86,24 @@ class EntityContainer:
     def has_entity(self, entity: Entity) -> bool:
         return entity in self.__data
 
-    @profiled
     def add_entity(self, entity: Entity) -> None:
         if not self.has_entity(entity):
             self.__data[entity] = set()
         else:
             raise EntityExistsError()
 
-    @profiled
     def remove_entity(self, entity: Entity) -> None:
         if self.has_entity(entity):
             self.__data.pop(entity)
         else:
             raise EntityNotFoundError()
 
-    @profiled
     def add_entity_data(self, entity: Entity, data: BaseComponent) -> None:
         if self.has_entity(entity):
             self.__data[entity].add(data)
         else:
             raise EntityNotFoundError()
 
-    @profiled
     def remove_entity_data(self, entity: Entity, data: BaseComponent) -> None:
         if self.has_entity(entity):
             self.__data[entity].discard(data)
@@ -81,18 +111,23 @@ class EntityContainer:
             raise EntityNotFoundError()
 
     @profiled
-    def filter(self, *filter_by: Type[BaseComponent]) -> Set[DataFilter]:
-        output = set()
-        for entity, data in self.__data.items():
-            temp = []
-            for component in data:
-                if type(component) in filter_by:
-                    temp.append(component)
-            if len(temp) == len(filter_by):
-                data_filter = DataFilter(entity, temp)
-                output.add(data_filter)
+    def filter(self, data_filter: ComponentDataFilter) -> Set[ComponentDataArray]:
+        return data_filter.filter(self.__data)
 
-        return output
+    @profiled
+    def get_component(self, entity: Entity, component_type: Type[TComponent]) -> TComponent:
+        if self.has_entity(entity):
+            for comp in self.__data[entity]:
+                if type(comp) == component_type:
+                    return comp
+            raise ComponentNotFoundError()
+
+    @profiled
+    def get_entity(self, id: int) -> Entity:
+        for entity in self.__data.keys():
+            if entity.get_id() == id:
+                return entity
+        raise EntityNotFoundError()
 
 
 class BufferedCommand:
@@ -143,6 +178,9 @@ class EntityManager:
     def add_component(self, entity: Entity, component: BaseComponent) -> None:
         self.__container.add_entity_data(entity, component)
 
+    def get_component(self, entity: Entity, component_type: Type[TComponent]) -> TComponent:
+        return self.__container.get_component(entity, component_type)
+
     def remove_component(self, entity: Entity, component: BaseComponent) -> None:
         self.__container.remove_entity_data(entity, component)
 
@@ -154,3 +192,10 @@ class EntityManager:
 
     def release_buffer(self) -> None:
         self.__command_buffer.execute_commands()
+
+    @staticmethod
+    def create_filter(required=(), without=(), additional=()) -> ComponentDataFilter:
+        return ComponentDataFilter(required, without, additional)
+
+    def get_entity(self, id: int) -> Entity:
+        return self.__container.get_entity(id)
