@@ -1,5 +1,5 @@
 from ecs.systems import BaseSystem
-from simulation.components import *
+from .__all_components import *
 from input import Mouse
 from ecs.world import World
 from simulation.math import Vector

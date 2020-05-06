@@ -1,10 +1,9 @@
 from ecs.world import World
-from simulation.components import *
+import simulation.__all_components
+from ecs.component import BaseComponent
 from sql.core import Factory
-from profiling import profiled
 
 
-@profiled
 def create_entities_from_database() -> None:
     world = World.default_world
     manager = world.get_manager()
@@ -19,7 +18,6 @@ def create_entities_from_database() -> None:
             manager.add_component(entity, component)
 
 
-@profiled
 def save_to_database() -> None:
     world = World.default_world
     manager = world.get_manager()

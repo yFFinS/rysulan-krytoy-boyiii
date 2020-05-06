@@ -3,7 +3,6 @@ from profiling import Profiler
 from ecs.world import World
 from main_timer import Time
 from input import Mouse
-import os
 
 
 WIDTH, HEIGHT = 800, 600
@@ -35,12 +34,15 @@ class Application:
         while self.__is_running:
             self.__screen.fill(BACKGROUND_COLOR)
 
+            events_found = False
             for event in pygame.event.get():
+                events_found = True
                 Mouse.handle_event(event)
                 if event.type == pygame.QUIT:
                     self.__is_running = False
                     break
-
+            if not events_found:
+                Mouse.handle_event(None)
             World.update_current()
 
             pygame.display.flip()
@@ -54,7 +56,6 @@ class Application:
             Profiler.end_profile_session()
 
         pygame.quit()
-        os._exit(0)
 
     @staticmethod
     def get_render_surface():
