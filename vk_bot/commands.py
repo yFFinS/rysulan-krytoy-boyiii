@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from random import randint
+from ecs.world import World
 
 
 class BotMethods:
@@ -65,11 +66,61 @@ class CreateEntitiesCommand(BaseCommand):
 
     def on_call(self, data: dict, methods: BotMethods) -> None:
         count = data["text"]
-        from simulation.utils import create_creature
         try:
-            for i in range(int(count)):
-                create_creature()
-            methods.send_message(data["peer_id"], f"Создано {count} существ.")
-        except TypeError as e:
-            print(e)
+            entity_manager = World.current_world.get_manager()
+
+            def buffered_command():
+                from simulation.utils import create_creature
+                for i in range(int(count)):
+                    create_creature(entity_manager, entity_manager.create_entity())
+                methods.send_message(data["peer_id"], f"Создано {count} существ.")
+
+            entity_manager.add_command(buffered_command)
+        except TypeError:
             methods.send_message(data["peer_id"], "Неправильный формат ввода.")
+
+
+class CreateNamedEntitiesCommand(BaseCommand):
+    _name = "creature"
+    _event_data = ("text", "peer_id")
+    _description = ""
+
+    def __init__(self):
+        from pygame import font
+        self.__font = font.Font(None, 25)
+        self.__name_color = (240, 240, 240)
+
+    def on_call(self, data: dict, methods: BotMethods) -> None:
+        name = data["text"]
+        entity_manager = World.current_world.get_manager()
+
+        def buffered_command():
+            from simulation.utils import create_creature
+            from simulation.components import EntityName, RenderSprite, Position
+            from pygame import sprite, Surface
+            from simulation.math import Vector
+
+            name_entity = entity_manager.create_entity()
+            follow_entity = entity_manager.create_entity()
+            create_creature(entity_manager, follow_entity)
+            name_comp = EntityName()
+            name_comp.value = name
+            name_comp.entity = follow_entity
+            name_comp.user_id = data["peer_id"]
+
+            render_comp = RenderSprite()
+            text_sprite = sprite.Sprite()
+            text = self.__font.render(name, True, self.__name_color)
+            text_sprite.image = text
+            text_sprite.rect = text.get_rect()
+            render_comp.sprite = text_sprite
+            position_comp = Position()
+            position_comp.value = Vector(0, 0)
+
+            entity_manager.add_component(name_entity, name_comp)
+            entity_manager.add_component(name_entity, render_comp)
+            entity_manager.add_component(name_entity, position_comp)
+
+            methods.send_message(data["peer_id"], "Существо создано.")
+
+        entity_manager.add_command(buffered_command)

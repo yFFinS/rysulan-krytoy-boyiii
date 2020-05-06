@@ -2,6 +2,7 @@ from ecs.systems import BaseSystem
 from simulation.components import *
 from input import Mouse
 from ecs.world import World
+from simulation.math import Vector
 
 
 class RenderSystem(BaseSystem):
@@ -16,13 +17,11 @@ class RenderSystem(BaseSystem):
     def on_create(self):
         from application import Application
         self.__render_surface = Application.get_render_surface()
-        for i in self.entity_manager.get_entities().filter(RenderSprite):
-            render_comp = i.get_component(RenderSprite)
-            self.__sprites.add(render_comp.sprite)
+        self.filter = self.entity_manager.create_filter(required=(RenderSprite, Position))
 
     def on_update(self, delta_time: float):
         self.__cached_positions.clear()
-        for i in self.entity_manager.get_entities().filter(RenderSprite, Position):
+        for i in self.query():
 
             render_comp = i.get_component(RenderSprite)
             if not render_comp.sprite.groups():
@@ -54,9 +53,30 @@ class MouseDragSystem(BaseSystem):
     def on_update(self, delta_time: float) -> None:
         if Mouse.is_mouse_down():
             self.__drag_position = Mouse.get_position()
-        if Mouse.is_mouse() and self.__drag_position is not None:
+        if self.__drag_position is not None:
             offset = Mouse.get_position() - self.__drag_position
             self.__render_system.camera_position = self.__prev_camera_position + offset
         elif Mouse.is_mouse_up():
             self.__drag_position = None
             self.__prev_camera_position = self.__render_system.camera_position
+
+
+class EntityNameFollowSystem(BaseSystem):
+
+    def __init__(self):
+        self.__cached_positions = dict()
+        self.__name_offset = Vector(0, -18)
+
+    def on_create(self) -> None:
+        self.filter = self.entity_manager.create_filter(required=(Position, EntityName))
+
+    def on_update(self, delta_time: float) -> None:
+        for i in self.query():
+            entity = i.get_component(EntityName).entity
+            follow_position_comp = self.__cached_positions.get(entity, None)
+            if follow_position_comp is None:
+                follow_position_comp = self.entity_manager.get_component(entity, Position)
+                self.__cached_positions[entity] = follow_position_comp
+
+            position_comp = i.get_component(Position)
+            position_comp.value = follow_position_comp.value + self.__name_offset
