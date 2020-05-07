@@ -1,1 +1,1 @@
-from .components import RenderSprite, Position, EntityName
+from .components import *
