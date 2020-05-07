@@ -65,3 +65,13 @@ class Vector:
 
     def __neg__(self):
         return Vector(-self.x, -self.y)
+
+    def normalized(self) -> "Vector":
+        max_value = max(abs(self.x), abs(self.y)) if self.x != self.y != 0 else 1
+        return Vector(self.x / max_value, self.y / max_value)
+
+    def __eq__(self, other):
+        return abs(self.x - other.x) < 0.0001 and abs(self.y - other.y) < 0.0001
+
+    def __ne__(self, other):
+        return not self == other
