@@ -1,8 +1,7 @@
 from random import randint
-from pygame import sprite, Surface, draw
-from .math import Vector
+from pygame import Surface, draw
 from .settings import *
-from ecs.entities import Entity, EntityManager
+from ecs.entities import Entity
 from .components import *
 
 
@@ -32,16 +31,18 @@ def create_creature(entity_manager: EntityManager, entity: Entity) -> None:
     pos_comp = Position()
     pos_comp.value = Vector(randint(-WORLD_SIZE, WORLD_SIZE), randint(-WORLD_SIZE, WORLD_SIZE))
     target_pos_comp = TargetPosition()
-    target_pos_comp.value = Vector(randint(-WORLD_SIZE, WORLD_SIZE), randint(-WORLD_SIZE, WORLD_SIZE))
     render_comp = RenderSprite()
     render_comp.sprite = create_circle(START_CREATURE_SIZE, START_CREATURE_COLOR,
                                        CREATURE_BORDER_COLOR, CREATURE_BORDER_WIDTH)
     move_speed_comp = MoveSpeed()
     move_speed_comp.value = randint(10, 100)
+    hunger_comp = Hunger()
+    hunger_comp.value = randint(10, 25)
     entity_manager.add_component(entity, pos_comp)
     entity_manager.add_component(entity, render_comp)
     entity_manager.add_component(entity, target_pos_comp)
     entity_manager.add_component(entity, move_speed_comp)
+    entity_manager.add_component(entity, hunger_comp)
 
 
 def create_food(entity_manager: EntityManager, entity: Entity) -> None:
