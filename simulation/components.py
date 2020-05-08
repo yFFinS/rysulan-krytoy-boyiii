@@ -84,3 +84,51 @@ class MoveSpeed(BaseComponent):
 
     def to_database(self) -> None:
         self.sql_speed = self.value
+
+
+class Priority(BaseComponent):
+    __slots__ = ("value",)
+    sql_priority = sa.Column(sa.String, name="priority")
+
+    def from_database(self, entity_manager: EntityManager) -> None:
+        self.value = self.sql_priority
+
+    def to_database(self) -> None:
+        self.sql_priority = self.value
+
+
+class Strength(BaseComponent):
+    __slots__ = ("value",)
+    sql_strength = sa.Column(sa.Integer, name="strength")
+
+    def from_database(self, entity_manager: EntityManager) -> None:
+        self.value = self.sql_strength
+
+    def to_database(self) -> None:
+        self.sql_strength = self.value
+
+
+class Speed(BaseComponent):
+    __slots__ = ("value",)
+    sql_speed = sa.Column(sa.Integer, name="speed")
+
+    def from_database(self, entity_manager: EntityManager) -> None:
+        self.value = self.sql_speed
+
+    def to_database(self) -> None:
+        self.sql_speed = self.value
+
+
+class Hunger(BaseComponent):
+    __slots__ = ("value",)
+    sql_hunger = sa.Column(sa.Integer, name="hunger")
+
+    def from_database(self, entity_manager: EntityManager) -> None:
+        self.value = self.sql_hunger
+
+    def to_database(self) -> None:
+        self.sql_hunger = self.value
+
+
+class BushTag(BaseComponent):
+    pass
