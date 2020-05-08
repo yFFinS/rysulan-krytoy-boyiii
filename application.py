@@ -6,7 +6,7 @@ from input import Mouse
 
 
 WIDTH, HEIGHT = 800, 600
-BACKGROUND_COLOR = (0, 0, 0)
+BACKGROUND_COLOR = (0, 10, 100)
 
 
 class Application:

@@ -37,6 +37,30 @@ class Position(BaseComponent):
         self.sql_y = self.value.y
 
 
+class TargetPosition(BaseComponent):
+    __slots__ = ("value",)
+    sql_x = sa.Column(sa.Float, name="x")
+    sql_y = sa.Column(sa.Float, name="y")
+
+    def from_database(self, entity_manager) -> None:
+        self.value = Vector(self.sql_x, self.sql_y)
+
+    def to_database(self) -> None:
+        self.sql_x = self.value.x
+        self.sql_y = self.value.y
+
+
+class Scale(BaseComponent):
+    __slots__ = ("value",)
+    sql_scale = sa.Column(sa.Float, name="scale")
+
+    def from_database(self, entity_manager) -> None:
+        self.value = self.sql_scale
+
+    def to_database(self) -> None:
+        self.sql_scale = self.value
+
+
 class EntityName(BaseComponent):
     __slots__ = ("value", "entity")
     sql_name = sa.Column(sa.String, name="name")
@@ -49,3 +73,14 @@ class EntityName(BaseComponent):
     def to_database(self) -> None:
         self.sql_name = self.value
         self.sql_linked_entity_id = self.entity.get_id()
+
+
+class MoveSpeed(BaseComponent):
+    __slots__ = ("value",)
+    sql_speed = sa.Column(sa.Float, name="speed")
+
+    def from_database(self, entity_manager) -> None:
+        self.value = self.sql_speed
+
+    def to_database(self) -> None:
+        self.sql_speed = self.value
