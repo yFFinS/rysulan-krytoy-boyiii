@@ -95,7 +95,7 @@ class CreateEntitiesCommand(BaseCommand):
 
         def buffered_command():
             from simulation.utils import create_creature
-            for i in range(int(count)):
+            for i in range(count):
                 create_creature(entity_manager, entity_manager.create_entity())
             methods.send_message(data["peer_id"], f"Создано {count} существ.")
 

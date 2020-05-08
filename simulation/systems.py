@@ -1,6 +1,6 @@
 from ecs.systems import BaseSystem
 from .__all_components import *
-from input import Mouse
+from core.input import Mouse
 from ecs.world import World
 from simulation.math import Vector
 from pygame import sprite
@@ -17,7 +17,7 @@ class RenderSystem(BaseSystem):
         self.__cached_positions = []
 
     def on_create(self):
-        from application import Application
+        from core.application import Application
         self.__render_surface = Application.get_render_surface()
         self.filter = self.entity_manager.create_filter(required=(RenderSprite, Position))
 
