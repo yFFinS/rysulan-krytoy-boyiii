@@ -1,5 +1,4 @@
-from pygame.locals import MOUSEBUTTONUP, MOUSEBUTTONDOWN
-from pygame.event import EventType
+from pygame.locals import MOUSEBUTTONUP, MOUSEBUTTONDOWN, BUTTON_LEFT, BUTTON_RIGHT
 from pygame import mouse
 from enum import Enum
 from simulation.math import Vector
@@ -18,19 +17,19 @@ class Mouse:
     __position: Vector = Vector(0, 0)
 
     @staticmethod
-    def handle_event(event: EventType) -> None:
+    def handle_event(event) -> None:
         pos = mouse.get_pos()
         Mouse.__position = Vector(pos[0], pos[1])
-
-        if event.type == MOUSEBUTTONDOWN:
-            Mouse.__state = MouseState.PRESSED
-        elif event.type == MOUSEBUTTONUP:
-            Mouse.__state = MouseState.RELEASED
-        elif Mouse.__state != MouseState.HOLD:
-            if Mouse.__state == MouseState.PRESSED:
+        if event is None or event.type not in (MOUSEBUTTONDOWN, MOUSEBUTTONUP):
+            if Mouse.__state == MouseState.PRESSED or Mouse.__state == MouseState.HOLD:
                 Mouse.__state = MouseState.HOLD
             else:
                 Mouse.__state = MouseState.NONE
+        else:
+            if event.type == MOUSEBUTTONDOWN and event.button in (BUTTON_LEFT, BUTTON_RIGHT):
+                Mouse.__state = MouseState.PRESSED
+            if event.type == MOUSEBUTTONUP:
+                Mouse.__state = MouseState.RELEASED
 
     @staticmethod
     def is_mouse_down() -> bool:
