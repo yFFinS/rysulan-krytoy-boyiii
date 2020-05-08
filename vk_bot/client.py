@@ -2,6 +2,7 @@ from vk_api import vk_api, VkApi
 from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType, VkBotEvent
 from vk_bot.commands import *
 from typing import Dict, TypeVar
+from os.path import exists
 
 
 PROPERTIES_FILE_PATH = "vk_bot/bot.properties"
@@ -20,6 +21,11 @@ class Client:
     __commands: Dict[str, TCommand]
 
     def __init__(self):
+        if not exists(PROPERTIES_FILE_PATH):
+            with open(PROPERTIES_FILE_PATH, "w") as file:
+                file.write("token=\ngroup_id=")
+            print("You need to set bot properties.")
+            exit(0)
         with open(PROPERTIES_FILE_PATH, "r") as file:
             for line in file.readlines():
                 line_data = line.strip().split("=")
