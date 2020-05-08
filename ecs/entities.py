@@ -1,6 +1,6 @@
 from typing import Dict, List, Type, TypeVar, Callable, Set
 from ecs.component import BaseComponent
-from profiling import profiled
+from core.profiling import profiled
 
 
 class Entity:

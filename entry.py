@@ -1,4 +1,4 @@
-from application import Application
+from core.application import Application
 from sql.data import create_entities_from_database, save_to_database
 import vk_bot.client
 import sql.core
