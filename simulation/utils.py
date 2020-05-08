@@ -28,7 +28,7 @@ def create_circle(radius: int, fill_color, border_color=None, border_width=1):
 
 
 def create_creature(entity_manager: EntityManager, entity: Entity) -> None:
-    from .components import Position, RenderSprite, TargetPosition, MoveSpeed
+    from .components import Position, RenderSprite, TargetPosition, MoveSpeed, Scale
     pos_comp = Position()
     pos_comp.value = Vector(randint(-WORLD_SIZE, WORLD_SIZE), randint(-WORLD_SIZE, WORLD_SIZE))
     target_pos_comp = TargetPosition()
@@ -38,7 +38,10 @@ def create_creature(entity_manager: EntityManager, entity: Entity) -> None:
                                        CREATURE_BORDER_COLOR, CREATURE_BORDER_WIDTH)
     move_speed_comp = MoveSpeed()
     move_speed_comp.value = randint(10, 100) / 15
+    scale_comp = Scale()
+    scale_comp.value = randint(10, 30) / 10
     entity_manager.add_component(entity, pos_comp)
     entity_manager.add_component(entity, render_comp)
     entity_manager.add_component(entity, target_pos_comp)
     entity_manager.add_component(entity, move_speed_comp)
+    entity_manager.add_component(entity, scale_comp)
