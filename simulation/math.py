@@ -75,3 +75,6 @@ class Vector:
 
     def __ne__(self, other):
         return not self == other
+
+    def sqr_len(self) -> float:
+        return self.x * self.x + self.y * self.y
