@@ -20,7 +20,9 @@ class Profiler:
         Profiler.__is_session_started = False
         if not path.exists(Profiler.PROFILING_RESULT_DIRECTORY):
             makedirs(Profiler.PROFILING_RESULT_DIRECTORY)
-        with open(Profiler.PROFILING_RESULT_DIRECTORY + f"profile_session_{str(datetime.now()).replace('.', '-').replace(':', '-')}", "w") as output_stream:
+        with open(Profiler.PROFILING_RESULT_DIRECTORY
+                  + f"profile_session_{str(datetime.now()).replace('.', '-').replace(':', '-')}", "w")\
+                as output_stream:
             lines = []
             for func_name, data in Profiler.__session_data.items():
                 lines.append(f"{func_name} average time: {'%.3f' % (data[1] * 1000 / data[0])} ms.\n")
@@ -45,6 +47,8 @@ class Profiler:
 
     @staticmethod
     def clear_log() -> None:
+        if not path.exists(Profiler.PROFILING_RESULT_DIRECTORY):
+            return
         for filename in listdir(Profiler.PROFILING_RESULT_DIRECTORY):
             file_path = path.join(Profiler.PROFILING_RESULT_DIRECTORY, filename)
             try:
