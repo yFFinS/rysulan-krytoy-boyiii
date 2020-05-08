@@ -3,12 +3,12 @@ from .__all_components import *
 from input import Mouse
 from ecs.world import World
 from simulation.math import Vector
+from pygame import sprite
 
 
 class RenderSystem(BaseSystem):
 
     def __init__(self):
-        from pygame import sprite
         self.__sprites = sprite.Group()
         self.__render_surface = None
         self.camera_position: Vector = Vector(0, 0)
@@ -53,7 +53,7 @@ class MouseDragSystem(BaseSystem):
     def on_update(self, delta_time: float) -> None:
         if Mouse.is_mouse_down():
             self.__drag_position = Mouse.get_position()
-        if self.__drag_position is not None:
+        if self.__drag_position is not None and Mouse.is_mouse():
             offset = Mouse.get_position() - self.__drag_position
             self.__render_system.camera_position = self.__prev_camera_position + offset
         elif Mouse.is_mouse_up():
@@ -80,3 +80,17 @@ class EntityNameFollowSystem(BaseSystem):
 
             position_comp = i.get_component(Position)
             position_comp.value = follow_position_comp.value + self.__name_offset
+
+
+class MoveToTargetSystem(BaseSystem):
+
+    def on_create(self) -> None:
+        self.filter = self.entity_manager.create_filter(required=(MoveSpeed, Position, TargetPosition))
+
+    def on_update(self, delta_time: float) -> None:
+        for i in self.query():
+            target_pos = i.get_component(TargetPosition).value
+            if target_pos is not None:
+                pos_comp = i.get_component(Position)
+                speed = i.get_component(MoveSpeed).value
+                pos_comp.value += (target_pos - pos_comp.value).normalized() * (speed * delta_time)
