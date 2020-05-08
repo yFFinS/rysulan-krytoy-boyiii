@@ -93,9 +93,12 @@ class MoveToTargetSystem(BaseSystem):
         for i in self.query():
             target_pos = i.get_component(TargetPosition).value
             pos_comp = i.get_component(Position)
-            if target_pos is not None and (target_pos - pos_comp.value).sqr_len() > 1.5:
-                speed = i.get_component(MoveSpeed).value
-                pos_comp.value += (target_pos - pos_comp.value).normalized() * (speed * delta_time)
+            if target_pos is not None:
+                if (target_pos - pos_comp.value).sqr_len() > 1.5:
+                    speed = i.get_component(MoveSpeed).value
+                    pos_comp.value += (target_pos - pos_comp.value).normalized() * (speed * delta_time)
+                else:
+                    pos_comp.value = target_pos
 
 
 class CreateFood(BaseSystem):
