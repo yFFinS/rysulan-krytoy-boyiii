@@ -1,8 +1,10 @@
 from ecs.world import World
 import simulation.__all_components
 from ecs.component import BaseComponent
-from sql.core import Factory
-
+from .core import Factory
+from .core import SqlAlchemyBase
+from .core import sa
+from typing import Dict
 
 def create_entities_from_database() -> None:
     world = World.default_world
@@ -34,5 +36,15 @@ def save_to_database() -> None:
             except:
                 session.rollback()
                 print(component, "can't be added to db.")
+
     session.commit()
     session.close()
+
+
+class UserEntity(SqlAlchemyBase):
+    __tablename__ = "user_entities"
+    user_id = sa.Column(sa.String, primary_key=True, index=True)
+    entity_id = sa.Column(sa.Integer)
+
+
+def save_user_entities(data: )
