@@ -48,18 +48,7 @@ class TargetPosition(BaseComponent):
     def to_database(self) -> None:
         self.sql_x = self.value.x
         self.sql_y = self.value.y
-
-
-class Scale(BaseComponent):
-    __slots__ = ("value",)
-    sql_scale = sa.Column(sa.Float, name="scale")
-
-    def from_database(self, entity_manager) -> None:
-        self.value = self.sql_scale
-
-    def to_database(self) -> None:
-        self.sql_scale = self.value
-
+ 
 
 class EntityName(BaseComponent):
     __slots__ = ("value", "entity")
@@ -106,18 +95,7 @@ class Strength(BaseComponent):
 
     def to_database(self) -> None:
         self.sql_strength = self.value
-
-
-class Speed(BaseComponent):
-    __slots__ = ("value",)
-    sql_speed = sa.Column(sa.Integer, name="speed")
-
-    def from_database(self, entity_manager: EntityManager) -> None:
-        self.value = self.sql_speed
-
-    def to_database(self) -> None:
-        self.sql_speed = self.value
-
+        
 
 class Hunger(BaseComponent):
     __slots__ = ("value",)
