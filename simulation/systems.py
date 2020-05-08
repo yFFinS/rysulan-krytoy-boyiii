@@ -4,6 +4,8 @@ from input import Mouse
 from ecs.world import World
 from simulation.math import Vector
 from pygame import sprite
+from .utils import create_food
+from .settings import *
 
 
 class RenderSystem(BaseSystem):
@@ -94,3 +96,68 @@ class MoveToTargetSystem(BaseSystem):
                 pos_comp = i.get_component(Position)
                 speed = i.get_component(MoveSpeed).value
                 pos_comp.value += (target_pos - pos_comp.value).normalized() * (speed * delta_time)
+
+
+class CreateFood(BaseSystem):
+
+    def __init__(self):
+        self.time = 3
+
+    def on_update(self, delta_time: float) -> None:
+        self.time += delta_time
+        if self.time >= FOOD_CREATE_DELAY:
+            self.entity_manager.add_command(create_food, self.entity_manager, self.entity_manager.create_entity())
+            self.time = 0
+
+
+class Hungry(BaseSystem):
+
+    def __init__(self):
+        self.hunger_time = 0
+
+    def on_create(self) -> None:
+        self.filter = self.entity_manager.create_filter(required=(Hunger, Priority))
+
+    def on_update(self, delta_time: float) -> None:
+        self.hunger_time += delta_time
+        if self.hunger_time >= HUNGER_TICK_DELAY:
+            for i in self.query():
+                hunger_comp = i.get_component(Hunger)
+                hunger_comp.value -= 1
+                if hunger_comp.value <= EXTREME_HUNGER_DELAY:
+                    priority_comp = i.get_component(Priority)
+                    priority_comp.value = 'gathering'
+            self.hunger_time = 0
+
+
+class GatheringPriority(BaseSystem):
+
+    def __init__(self):
+        self.gathering_time = 1
+
+    def on_create(self) -> None:
+        self.filter = self.entity_manager.create_filter(required=(Position, TargetPosition, Hunger))
+        self.filter2 = self.entity_manager.create_filter(required=(Position, BushTag))
+
+    def on_update(self, delta_time: float) -> None:
+        self.gathering_time += delta_time
+        bush_pos = []
+        if self.gathering_time >= 1:
+            for i in self.entity_manager.get_entities().filter(self.filter2):
+                bush_pos_comp = i.get_component(Position)
+                bush_pos.append(bush_pos_comp.value)
+            if not bush_pos:
+                return
+            for i in self.query():
+                creature_pos_comp = i.get_component(Position)
+                creature_target_comp = i.get_component(TargetPosition)
+                mini = bush_pos[0]
+                for j in bush_pos:
+                    if (creature_pos_comp.value - j).sqr_len() < (creature_pos_comp.value - mini).sqr_len():
+                        mini = j
+                creature_target_comp.value = mini
+                if (creature_target_comp.value - creature_pos_comp.value).sqr_len() <= EAT_DISTANCE:
+                    hunger_comp = i.get_component(Hunger)
+                    hunger_comp.value += BUSH_FOOD_VALUE
+                    #Тут надо убить куст
+            self.gathering_time = 0
