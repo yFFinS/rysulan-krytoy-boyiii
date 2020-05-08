@@ -109,7 +109,7 @@ class CreateFood(BaseSystem):
             self.entity_manager.add_command(create_food, self.entity_manager, self.entity_manager.create_entity())
             self.time = 0
 
-
+            
 class Hungry(BaseSystem):
 
     def __init__(self):
