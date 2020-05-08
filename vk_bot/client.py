@@ -41,13 +41,26 @@ class Client:
 
     @staticmethod
     def __get_command(event: VkBotEvent) -> str:
-        return event.obj["text"].strip().split()[0]
+        text = event.obj["text"]
+        return text.strip().split()[0]
 
     def __process_command(self, event: VkBotEvent) -> None:
         name = self.__get_command(event)
+        if name == "help":
+            self.__help_command(event.obj["peer_id"])
+            return
         command = self.__commands.get(name, None)
         if command is not None:
-            command.on_call(command.filter_data(event.obj), self.__methods)
+            try:
+                command.on_call(command.filter_data(event.obj), command.parse_args(event.obj["text"]), self.__methods)
+            except BaseException as e:
+                self.__methods.send_message(event.obj["peer_id"], str(e))
+
+    def __help_command(self, peer_id: str) -> None:
+        message_data = []
+        for command in self.__commands.values():
+            message_data.append(command.help_data())
+        self.__methods.send_message(peer_id, "\n".join(message_data))
 
 
 def init():
