@@ -37,14 +37,11 @@ def create_creature(entity_manager: EntityManager, entity: Entity) -> None:
     render_comp.sprite = create_circle(START_CREATURE_SIZE, START_CREATURE_COLOR,
                                        CREATURE_BORDER_COLOR, CREATURE_BORDER_WIDTH)
     move_speed_comp = MoveSpeed()
-    move_speed_comp.value = randint(10, 100) / 15
-    scale_comp = Scale()
-    scale_comp.value = randint(10, 30) / 10
+    move_speed_comp.value = randint(10, 100)
     entity_manager.add_component(entity, pos_comp)
     entity_manager.add_component(entity, render_comp)
     entity_manager.add_component(entity, target_pos_comp)
     entity_manager.add_component(entity, move_speed_comp)
-    entity_manager.add_component(entity, scale_comp)
 
 
 def create_food(entity_manager: EntityManager, entity: Entity) -> None:

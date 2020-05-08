@@ -1,8 +1,8 @@
 import pygame
-from profiling import Profiler
+from core.profiling import Profiler
 from ecs.world import World
-from main_timer import Time
-from input import Mouse
+from core.main_timer import Time
+from core.input import Mouse
 
 
 WIDTH, HEIGHT = 800, 600

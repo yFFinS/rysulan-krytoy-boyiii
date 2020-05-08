@@ -1,8 +1,8 @@
 from ecs.entities import EntityManager
 from ecs.systems import BaseSystem
 from typing import Set, Type, TypeVar
-from profiling import profiled
-from main_timer import Time
+from core.profiling import profiled
+from core.main_timer import Time
 
 
 class SystemNotExistsError(Exception):

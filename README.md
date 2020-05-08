@@ -1,2 +1,7 @@
-# rysulan-krytoy-boyiii
-nice
+Тупа симуляция каких-то челиков.  
+Используется sql и vk бот.  
+Необходимые пакеты:  
+vk_api  
+sqlalchemy  
+pygame  
+Конец.
