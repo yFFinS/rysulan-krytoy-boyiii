@@ -11,6 +11,9 @@ class RenderSprite(BaseComponent):
     sql_width = sa.Column(sa.Integer, name="width")
     sql_height = sa.Column(sa.Integer, name="height")
 
+    def __init__(self):
+        self.sprite = None
+
     def to_database(self) -> None:
         bin_data = image.tostring(self.sprite.image, "RGBA")
         self.sql_image = bin_data
@@ -29,6 +32,9 @@ class Position(BaseComponent):
     sql_y = sa.Column(sa.Float, name="y")
     __slots__ = ("value",)
 
+    def __init__(self):
+        self.value = None
+
     def from_database(self, entity_manager: EntityManager) -> None:
         self.value = Vector(self.sql_x, self.sql_y)
 
@@ -41,6 +47,9 @@ class TargetPosition(BaseComponent):
     __slots__ = ("value",)
     sql_x = sa.Column(sa.Float, name="x")
     sql_y = sa.Column(sa.Float, name="y")
+
+    def __init__(self):
+        self.value = None
 
     def from_database(self, entity_manager) -> None:
         self.value = Vector(self.sql_x, self.sql_y)
@@ -55,6 +64,10 @@ class EntityName(BaseComponent):
     sql_name = sa.Column(sa.String, name="name")
     sql_linked_entity_id = sa.Column(sa.Integer, name="linked_entity_id")
 
+    def __init__(self):
+        self.value = None
+        self.entity = None
+
     def from_database(self, entity_manager: EntityManager) -> None:
         self.value = self.sql_name
         self.entity = entity_manager.get_entity(self.sql_linked_entity_id)
@@ -68,6 +81,9 @@ class MoveSpeed(BaseComponent):
     __slots__ = ("value",)
     sql_speed = sa.Column(sa.Float, name="speed")
 
+    def __init__(self):
+        self.value = None
+
     def from_database(self, entity_manager) -> None:
         self.value = self.sql_speed
 
@@ -78,6 +94,9 @@ class MoveSpeed(BaseComponent):
 class Priority(BaseComponent):
     __slots__ = ("value",)
     sql_priority = sa.Column(sa.String, name="priority")
+
+    def __init__(self):
+        self.value = None
 
     def from_database(self, entity_manager: EntityManager) -> None:
         self.value = self.sql_priority
@@ -90,6 +109,9 @@ class Strength(BaseComponent):
     __slots__ = ("value",)
     sql_strength = sa.Column(sa.Integer, name="strength")
 
+    def __init__(self):
+        self.value = None
+
     def from_database(self, entity_manager: EntityManager) -> None:
         self.value = self.sql_strength
 
@@ -100,6 +122,9 @@ class Strength(BaseComponent):
 class Hunger(BaseComponent):
     __slots__ = ("value",)
     sql_hunger = sa.Column(sa.Integer, name="hunger")
+
+    def __init__(self):
+        self.value = None
 
     def from_database(self, entity_manager: EntityManager) -> None:
         self.value = self.sql_hunger
