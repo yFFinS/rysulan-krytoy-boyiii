@@ -59,30 +59,48 @@ class ComponentDataFilter:
         self.without = without
         self.additional = additional
 
-    def filter(self, data: Dict[Entity, Set[BaseComponent]]) -> Set[ComponentDataArray]:
+    def filter(self, data: Dict[Entity, Set[BaseComponent]],
+               cache: Dict[Type[TComponent], Set[Entity]] = None) -> Set[ComponentDataArray]:
         output = set()
-        for entity, components in data.items():
-            temp = []
-            required_count = 0
-            for component in components:
-                if type(component) in self.without:
-                    temp.clear()
-                    break
-                elif type(component) in self.required:
-                    required_count += 1
-                    temp.append(component)
-                elif type(component) in self.additional:
-                    temp.append(component)
-            if required_count == len(self.required) and temp:
-                output.add(ComponentDataArray(entity, temp))
+        if cache is None:
+            for entity, components in data.items():
+                temp = []
+                required_count = 0
+                for component in components:
+                    comp_type = type(component)
+                    if comp_type in self.without:
+                        temp.clear()
+                        break
+                    elif comp_type in self.required:
+                        required_count += 1
+                        temp.append(component)
+                    elif comp_type in self.additional:
+                        temp.append(component)
+                if required_count == len(self.required) and temp:
+                    output.add(ComponentDataArray(entity, temp))
+        else:
+            entities = set(data.keys())
+            for req in self.required:
+                entities &= cache[req]
+            for wout in self.without:
+                entities -= cache[wout]
+            output = set(
+                ComponentDataArray(
+                    entity,
+                    [component for component in data[entity]
+                     if type(component) in self.required or type(component) in self.additional])
+                for entity in entities)
         return output
 
 
 class EntityContainer:
-    __slots__ = ("__data",)
+    __slots__ = ("__data", "__cache")
 
     def __init__(self):
         self.__data: Dict[Entity, Set[BaseComponent]] = dict()
+        import simulation.__all_components
+        self.__cache: Dict[Type[TComponent], Set[Entity]]\
+            = {comp_type: set() for comp_type in BaseComponent.__subclasses__()}
 
     def __getitem__(self, item):
         return self.__data[item]
@@ -113,6 +131,7 @@ class EntityContainer:
     def add_entity_data(self, entity: Entity, data: BaseComponent) -> None:
         if self.has_entity(entity):
             self.__data[entity].add(data)
+            self.__cache[type(data)].add(entity)
         else:
             raise EntityNotFoundError()
 
@@ -125,6 +144,7 @@ class EntityContainer:
                     break
             if to_remove is not None:
                 self.__data[entity].discard(to_remove)
+                self.__cache[type(to_remove)].discard(entity)
                 from sql.data import EntryDeletionStack
                 EntryDeletionStack.add(to_remove)
                 to_remove.on_remove()
@@ -134,7 +154,7 @@ class EntityContainer:
 
     @profiled
     def filter(self, data_filter: ComponentDataFilter) -> Set[ComponentDataArray]:
-        return data_filter.filter(self.__data)
+        return data_filter.filter(self.__data, self.__cache)
 
     @profiled
     def get_component(self, entity: Entity, component_type: Type[TComponent]) -> TComponent:
