@@ -73,3 +73,26 @@ def create_food(entity_manager: EntityManager, entity: Entity) -> None:
     entity_manager.add_component(entity, pos_comp)
     entity_manager.add_component(entity, render_comp)
     entity_manager.add_component(entity, BushTag())
+
+
+def create_named_creature(entity_manager: EntityManager, entity: Entity, name: str, user_id: str, font, color) -> None:
+    name_entity = entity_manager.create_entity()
+    follow_entity = entity
+    create_creature(entity_manager, follow_entity)
+    name_comp = EntityName()
+    name_comp.value = name
+    name_comp.entity = follow_entity
+    name_comp.user_id = user_id
+
+    render_comp = RenderSprite()
+    text_sprite = sprite.Sprite()
+    text = font.render(name, True, color)
+    text_sprite.image = text
+    text_sprite.rect = text.get_rect()
+    render_comp.sprite = text_sprite
+    position_comp = Position()
+    position_comp.value = Vector(0, 0)
+
+    entity_manager.add_component(name_entity, name_comp)
+    entity_manager.add_component(name_entity, render_comp)
+    entity_manager.add_component(name_entity, position_comp)
