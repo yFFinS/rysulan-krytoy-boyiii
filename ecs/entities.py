@@ -216,5 +216,8 @@ class EntityManager:
     def create_filter(required=(), without=(), additional=()) -> ComponentDataFilter:
         return ComponentDataFilter(required, without, additional)
 
-    def get_entity(self, id: int) -> Entity:
-        return self.__container.get_entity(id)
+    def get_entity(self, entity_id: int) -> Entity:
+        return self.__container.get_entity(entity_id)
+
+    def has_entity(self, entity: Entity) -> bool:
+        return self.__container.has_entity(entity)
