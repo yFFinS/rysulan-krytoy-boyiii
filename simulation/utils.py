@@ -30,19 +30,38 @@ def create_circle(radius: int, fill_color, border_color=None, border_width=1):
 def create_creature(entity_manager: EntityManager, entity: Entity) -> None:
     pos_comp = Position()
     pos_comp.value = Vector(randint(-WORLD_SIZE, WORLD_SIZE), randint(-WORLD_SIZE, WORLD_SIZE))
+
     target_pos_comp = TargetPosition()
+    target_pos_comp.value = None
+
     render_comp = RenderSprite()
     render_comp.sprite = create_circle(START_CREATURE_SIZE, START_CREATURE_COLOR,
                                        CREATURE_BORDER_COLOR, CREATURE_BORDER_WIDTH)
+
     move_speed_comp = MoveSpeed()
-    move_speed_comp.value = randint(10, 100)
+    move_speed_comp.value = randint(3, 13)
+
     hunger_comp = Hunger()
     hunger_comp.value = randint(10, 25)
+
+    rb_comp = Rigidbody()
+    rb_comp.radius = START_CREATURE_SIZE
+    rb_comp.velocity = Vector(0, 0)
+
+    str_comp = Strength()
+    str_comp.value = randint(1, 7)
+
+    hp_comp = Health()
+    hp_comp.value = randint(50, 151)
+
     entity_manager.add_component(entity, pos_comp)
     entity_manager.add_component(entity, render_comp)
     entity_manager.add_component(entity, target_pos_comp)
     entity_manager.add_component(entity, move_speed_comp)
     entity_manager.add_component(entity, hunger_comp)
+    entity_manager.add_component(entity, rb_comp)
+    entity_manager.add_component(entity, str_comp)
+    entity_manager.add_component(entity, hp_comp)
 
 
 def create_food(entity_manager: EntityManager, entity: Entity) -> None:
