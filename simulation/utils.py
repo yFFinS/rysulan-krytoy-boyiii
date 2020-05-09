@@ -42,7 +42,7 @@ def create_creature(entity_manager: EntityManager, entity: Entity) -> None:
     move_speed_comp.value = randint(3, 13)
 
     hunger_comp = Hunger()
-    hunger_comp.value = randint(10, 25)
+    hunger_comp.value = randint(40, 75)
 
     rb_comp = Rigidbody()
     rb_comp.radius = START_CREATURE_SIZE
@@ -75,14 +75,13 @@ def create_food(entity_manager: EntityManager, entity: Entity) -> None:
     entity_manager.add_component(entity, BushTag())
 
 
-def create_named_creature(entity_manager: EntityManager, entity: Entity, name: str, user_id: str, font, color) -> None:
+def create_named_creature(entity_manager: EntityManager, entity: Entity, name: str, font, color) -> None:
     name_entity = entity_manager.create_entity()
     follow_entity = entity
     create_creature(entity_manager, follow_entity)
     name_comp = EntityName()
     name_comp.value = name
     name_comp.entity = follow_entity
-    name_comp.user_id = user_id
 
     render_comp = RenderSprite()
     text_sprite = sprite.Sprite()
