@@ -1,19 +1,27 @@
+from pygame.time import Clock
+from time import time
+
+
 TARGET_FPS = 100
 
 
 class Time:
-    from pygame import time as pg_time
     __slots__ = ()
-    __clock = pg_time.Clock()
+    __clock = Clock()
+    __last_tick_time = 0
+    __delta_time = 0
 
     @staticmethod
     def tick() -> None:
+        cur_time = time()
+        Time.__delta_time = cur_time - Time.__last_tick_time
+        Time.__last_tick_time = cur_time
         Time.__clock.tick(TARGET_FPS)
 
     @staticmethod
     def get_delta_time() -> float:
-        return 1 / max(1.0, Time.get_fps())
+        return Time.__delta_time
 
     @staticmethod
     def get_fps() -> float:
-        return Time.__clock.get_fps()
+        return 1 / Time.__delta_time if Time.__delta_time != 0 else 1 / TARGET_FPS
