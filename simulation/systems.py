@@ -236,7 +236,6 @@ class CollisionSystem(BaseSystem):
             strength_comp = i.get_component(Strength)
             strength = strength_comp.value if strength_comp is not None else 1
             health_comp = i.get_component(Health)
-            hp = health_comp.value if health_comp is not None else None
 
             position = i.get_component(Position).value
             for ent, other_radius, other_position, other_vel, other_strength, other_hp in colliders:
@@ -245,16 +244,16 @@ class CollisionSystem(BaseSystem):
                 if sqr_dist < (radius + other_radius) * (radius + other_radius):
                     vel -= direction * (delta_time * PUSH_MULTIPLIER * sqr_dist * strength)
                     other_vel += direction * (delta_time * PUSH_MULTIPLIER * sqr_dist * other_strength)
-                    if hp is not None:
-                        hp -= other_strength
-                        if hp <= 0:
+                    if health_comp is not None:
+                        health_comp.value -= other_strength
+                        if health_comp.value <= 0:
                             self.entity_manager.add_command(self.__kill_creature, i.entity)
                     if other_hp is not None:
-                        hp -= strength
-                        if other_hp <= 0:
+                        other_hp.value -= strength
+                        if other_hp.value <= 0:
                             self.entity_manager.add_command(self.__kill_creature, ent)
 
-            colliders.append((i.entity, radius, position, vel, strength, hp))
+            colliders.append((i.entity, radius, position, vel, strength, health_comp))
 
         for ent, rad, pos, vel, strength, hp in colliders:
             pos += (vel + Vector(0.5 - random(), 0.5 - random()) * 0.1) * delta_time
@@ -292,6 +291,9 @@ class EvolveSystem(BaseSystem):
 
 class MouseHoverInfoSystem(BaseSystem):
 
+    def __init__(self):
+        self.__locked_entity = None
+
     def on_create(self) -> None:
         from core.application import Application
         self.filter = self.entity_manager.create_filter(required=(Position,),
@@ -299,12 +301,19 @@ class MouseHoverInfoSystem(BaseSystem):
         self.__render_system = World.current_world.get_or_create_system(RenderSystem)
         self.__font = pygame.font.Font(None, 30)
         self.__render_surface = Application.get_render_surface()
+        self.__locked_entity = None
 
     def on_update(self, delta_time: float) -> None:
         mouse_pos = Mouse.get_position()
+        if Mouse.is_mouse_down():
+            self.__locked_entity = None
         for i in self.query(self.filter):
             entity_pos = i.get_component(Position).value + self.__render_system.camera_position
-            if (entity_pos - mouse_pos).sqr_len() <= 65:
+            if (entity_pos - mouse_pos).sqr_len() <= 65 or self.__locked_entity is not None:
+                if Mouse.is_mouse_down():
+                    self.__locked_entity = i.entity
+                if self.__locked_entity is not None and i.entity != self.__locked_entity:
+                    continue
                 text = []
                 comp = i.get_component(MoveSpeed)
                 text.append(f"Entity id: {i.entity.get_id()}")
@@ -329,3 +338,4 @@ class MouseHoverInfoSystem(BaseSystem):
 
     def __render_line(self, line, pos) -> None:
         self.__render_surface.blit(line, pos)
+
