@@ -99,12 +99,13 @@ class CreateEntitiesCommand(BaseCommand):
         entity_manager = World.current_world.get_manager()
 
         def buffered_command():
-            for i in range(min(count, 5000 - len(entity_manager.get_entities()))):
+            c = min(count, 3000 - len(entity_manager.get_entities()))
+            for i in range(c):
                 from simulation.utils import create_named_creature
                 entity = entity_manager.create_entity()
                 create_named_creature(entity_manager, entity, "Bot" + str(entity.get_id()), self.__font,
                                       self.__name_color)
-            methods.send_message(data["peer_id"], f"Создано {count} существ.")
+            methods.send_message(data["peer_id"], f"Создано {c} существ.")
 
         entity_manager.add_command(buffered_command)
 
