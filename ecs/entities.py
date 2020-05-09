@@ -87,6 +87,9 @@ class EntityContainer:
     def __getitem__(self, item):
         return self.__data[item]
 
+    def __len__(self):
+        return len(self.__data)
+
     def has_entity(self, entity: Entity) -> bool:
         return entity in self.__data.keys()
 
