@@ -1,5 +1,5 @@
 from core.application import Application
-from sql.data import create_entities_from_database, save_to_database
+import sql.data as db_session
 import vk_bot.client
 import sql.core
 import os
@@ -10,10 +10,11 @@ app = Application()
 vk_bot.client.init()
 
 sql.core.init("sql/entities.sqlite")
-create_entities_from_database()
+db_session.create_entities_from_database()
 
 app.run(True, True)
 
-save_to_database()
+db_session.save_to_database()
+db_session.close()
 
 os._exit(0)
