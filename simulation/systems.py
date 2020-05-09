@@ -23,7 +23,8 @@ class RenderSystem(BaseSystem):
     def on_create(self):
         from core.application import Application
         self.__render_surface = Application.get_render_surface()
-        self.filter = self.entity_manager.create_filter(required=(RenderSprite, Position))
+        self.filter = self.entity_manager.create_filter(required=(RenderSprite, Position),
+                                                        without=(DeadTag,))
 
     def on_update(self, delta_time: float):
         __cached_positions = []
@@ -73,13 +74,14 @@ class EntityNameFollowSystem(BaseSystem):
         self.__name_offset = Vector(0, -18)
 
     def on_create(self) -> None:
-        self.filter = self.entity_manager.create_filter(required=(Position, EntityName))
+        self.filter = self.entity_manager.create_filter(required=(Position, EntityName),
+                                                        without=(DeadTag,))
 
     def on_update(self, delta_time: float) -> None:
         for i in self.query(self.filter):
             entity = i.get_component(EntityName).entity
             if not self.entity_manager.has_entity(entity):
-                self.entity_manager.add_command(self.__kill_name, i.entity)
+                self.entity_manager.add_component(i.entity, DeadTag())
                 return
             follow_position_comp = self.__cached_positions.get(entity, None)
             if follow_position_comp is None:
@@ -87,29 +89,24 @@ class EntityNameFollowSystem(BaseSystem):
                     follow_position_comp = self.entity_manager.get_component(entity, Position)
                     self.__cached_positions[entity] = follow_position_comp
                 except ComponentNotFoundError:
-                    self.entity_manager.add_command(self.__kill_name, i.entity)
+                    self.entity_manager.add_component(i.entity, DeadTag())
                     return
             position_comp = i.get_component(Position)
             position_comp.value = follow_position_comp.value + self.__name_offset
-
-    def __kill_name(self, entity) -> None:
-        try:
-            self.entity_manager.kill_entity(entity)
-        except EntityNotFoundError:
-            pass
 
 
 class MoveToTargetSystem(BaseSystem):
 
     def on_create(self) -> None:
-        self.filter = self.entity_manager.create_filter(required=(MoveSpeed, Position, TargetPosition))
+        self.filter = self.entity_manager.create_filter(required=(MoveSpeed, Position, TargetPosition),
+                                                        without=(DeadTag,))
 
     def on_update(self, delta_time: float) -> None:
         for i in self.query(self.filter):
             target_pos_comp = i.get_component(TargetPosition)
             pos_comp = i.get_component(Position)
             if target_pos_comp.value is not None:
-                if (target_pos_comp.value - pos_comp.value).sqr_len() > 1.5:
+                if (target_pos_comp.value - pos_comp.value).sqr_len() > 3:
                     speed = i.get_component(MoveSpeed).value
                     pos_comp.value += (target_pos_comp.value - pos_comp.value).normalized() * (speed * delta_time)
                 else:
@@ -135,7 +132,8 @@ class HungerSystem(BaseSystem):
         self.hunger_time = 0
 
     def on_create(self) -> None:
-        self.filter = self.entity_manager.create_filter(required=(Hunger,), additional=(MoveSpeed,))
+        self.filter = self.entity_manager.create_filter(required=(Hunger,), additional=(MoveSpeed,),
+                                                        without=(DeadTag,))
 
     def on_update(self, delta_time: float) -> None:
         self.hunger_time += delta_time
@@ -150,15 +148,9 @@ class HungerSystem(BaseSystem):
                 #     priority_comp = i.get_component(Priority)
                 #     priority_comp.value = 'gathering'
                 if hunger_comp.value <= 0:
-                    self.entity_manager.add_command(self.__kill_creature, i.entity)
+                    self.entity_manager.add_component(i.entity, DeadTag())
 
             self.hunger_time = 0
-
-    def __kill_creature(self, entity) -> None:
-        try:
-            self.entity_manager.kill_entity(entity)
-        except EntityNotFoundError:
-            pass
 
 
 class GatheringSystem(BaseSystem):
@@ -168,8 +160,10 @@ class GatheringSystem(BaseSystem):
 
     def on_create(self) -> None:
         self.filter = self.entity_manager.create_filter(required=(Position, TargetPosition, Hunger),
-                                                        additional=(Health,))
-        self.filter2 = self.entity_manager.create_filter(required=(Position, BushTag))
+                                                        additional=(Health,),
+                                                        without=(DeadTag,))
+        self.filter2 = self.entity_manager.create_filter(required=(Position, BushTag),
+                                                         without=(DeadTag,))
 
     def on_update(self, delta_time: float) -> None:
         self.gathering_time += delta_time
@@ -194,14 +188,8 @@ class GatheringSystem(BaseSystem):
                     hunger_comp.value += BUSH_FOOD_VALUE
                     if hp_comp is not None:
                         hp_comp.value += BUSH_FOOD_VALUE
-                    self.entity_manager.add_command(self.kill_bush, closest_bush[0])
+                    self.entity_manager.add_component(closest_bush[0], DeadTag())
             self.gathering_time = 0
-
-    def kill_bush(self, bush):
-        try:
-            self.entity_manager.kill_entity(bush)
-        except EntityNotFoundError:
-            pass
 
 
 class PositionLimitSystem(BaseSystem):
@@ -225,7 +213,9 @@ class PositionLimitSystem(BaseSystem):
 class CollisionSystem(BaseSystem):
 
     def on_create(self) -> None:
-        self.filter = self.entity_manager.create_filter(required=(Position, Rigidbody), additional=(Strength, Health))
+        self.filter = self.entity_manager.create_filter(required=(Position, Rigidbody),
+                                                        additional=(Strength, Health, Team))
+        self.physics_multiplier = 0.01
 
     def on_update(self, delta_time: float) -> None:
         colliders = []
@@ -237,33 +227,36 @@ class CollisionSystem(BaseSystem):
             strength = strength_comp.value if strength_comp is not None else 1
             health_comp = i.get_component(Health)
 
+            team_comp = i.get_component(Team)
+            team = team_comp.value if team_comp is not None else 0
+
             position = i.get_component(Position).value
-            for ent, other_radius, other_position, other_vel, other_strength, other_hp in colliders:
+            for ent, other_radius, other_position, other_vel, other_strength, other_hp, other_team in colliders:
+
                 direction = (other_position - position).normalized()
                 sqr_dist = (other_position - position).sqr_len()
+
                 if sqr_dist < (radius + other_radius) * (radius + other_radius):
-                    vel -= direction * (delta_time * PUSH_MULTIPLIER * sqr_dist * other_strength)
-                    other_vel += direction * (delta_time * PUSH_MULTIPLIER * sqr_dist * strength)
-                    if health_comp is not None:
-                        health_comp.value -= other_strength
-                        if health_comp.value <= 0:
-                            self.entity_manager.add_command(self.__kill_creature, i.entity)
-                    if other_hp is not None:
-                        other_hp.value -= strength
-                        if other_hp.value <= 0:
-                            self.entity_manager.add_command(self.__kill_creature, ent)
 
-            colliders.append((i.entity, radius, position, vel, strength, health_comp))
+                    vel -= direction * (self.physics_multiplier * PUSH_MULTIPLIER * sqr_dist * other_strength)
+                    other_vel += direction * (self.physics_multiplier * PUSH_MULTIPLIER * sqr_dist * strength)
 
-        for ent, rad, pos, vel, strength, hp in colliders:
+                    if team != other_team:
+                        if health_comp is not None:
+                            health_comp.value -= other_strength
+                            if health_comp.value <= 0:
+                                self.entity_manager.add_component(i.entity, DeadTag())
+
+                        if other_hp is not None:
+                            other_hp.value -= strength
+                            if other_hp.value <= 0:
+                                self.entity_manager.add_component(ent, DeadTag())
+
+            colliders.append((i.entity, radius, position, vel, strength, health_comp, team))
+
+        for pos, vel in map(lambda x: (x[2], x[3]), colliders):
             pos += (vel + Vector(0.5 - random(), 0.5 - random()) * 0.1) * delta_time
             vel *= 1 - DAMPENING
-
-    def __kill_creature(self, entity) -> None:
-        try:
-            self.entity_manager.kill_entity(entity)
-        except EntityNotFoundError:
-            pass
 
 
 class EvolveSystem(BaseSystem):
@@ -339,3 +332,62 @@ class MouseHoverInfoSystem(BaseSystem):
     def __render_line(self, line, pos) -> None:
         self.__render_surface.blit(line, pos)
 
+
+class DrawWorldBordersSystem(BaseSystem):
+
+    __update_order__ = 150
+
+    def __init__(self):
+        from simulation.utils import create_rect
+        from core.application import Application
+        wall_width = 5
+        color = (200, 20, 25)
+        self.__sprites = sprite.Group()
+        size = WORLD_SIZE + wall_width
+        wall = create_rect(int(2 * size), wall_width, color)
+        wall.rect.topleft = (-size, -size)
+        self.__sprites.add(wall)
+        wall = create_rect(int(2 * size) + wall_width, wall_width, color)
+        wall.rect.topleft = (-size, size)
+        self.__sprites.add(wall)
+        wall = create_rect(wall_width, int(2 * size), color)
+        wall.rect.topleft = (-size, -size)
+        self.__sprites.add(wall)
+        wall = create_rect(wall_width, int(2 * size) + wall_width, color)
+        wall.rect.topleft = (size, -size)
+        self.__sprites.add(wall)
+
+        self.__render_surface = Application.get_render_surface()
+        self.__render_system = World.current_world.get_or_create_system(RenderSystem)
+
+    def on_update(self, delta_time: float) -> None:
+        for i in self.__sprites.sprites():
+            pos = i.rect.center
+            i.rect.center = (pos[0] + self.__render_system.camera_position.x,
+                             pos[1] + self.__render_system.camera_position.y)
+        self.__sprites.draw(self.__render_surface)
+        for i in self.__sprites.sprites():
+            pos = i.rect.center
+            i.rect.center = (pos[0] - self.__render_system.camera_position.x,
+                             pos[1] - self.__render_system.camera_position.y)
+
+
+class KillSystem(BaseSystem):
+
+    __update_order__ = 200
+
+    def on_create(self) -> None:
+        self.filter = self.entity_manager.create_filter(required=(DeadTag,))
+
+    def on_update(self, delta_time: float) -> None:
+        to_kill = set()
+        for i in self.query(self.filter):
+            to_kill.add(i.entity)
+        self.entity_manager.add_command(self.__kill, to_kill)
+
+    def __kill(self, entities) -> None:
+        try:
+            for entity in entities:
+                self.entity_manager.kill_entity(entity)
+        except EntityNotFoundError:
+            pass

@@ -184,3 +184,18 @@ class Health(BaseComponent):
 
     def to_database(self) -> None:
         self.sql_health = self.value
+
+
+class Team(BaseComponent):
+    __slots__ = ("value",)
+    sql_team = sa.Column(sa.Integer, name="team")
+
+    def from_database(self, entity_manager) -> None:
+        self.value = self.sql_team
+
+    def to_database(self) -> None:
+        self.sql_team = self.value
+
+
+class DeadTag(BaseComponent):
+    pass
