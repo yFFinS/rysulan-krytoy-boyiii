@@ -78,13 +78,25 @@ class EntityNameFollowSystem(BaseSystem):
     def on_update(self, delta_time: float) -> None:
         for i in self.query(self.filter):
             entity = i.get_component(EntityName).entity
+            if not self.entity_manager.has_entity(entity):
+                self.entity_manager.add_command(self.__kill_name, i.entity)
+                return
             follow_position_comp = self.__cached_positions.get(entity, None)
             if follow_position_comp is None:
-                follow_position_comp = self.entity_manager.get_component(entity, Position)
-                self.__cached_positions[entity] = follow_position_comp
-
+                try:
+                    follow_position_comp = self.entity_manager.get_component(entity, Position)
+                    self.__cached_positions[entity] = follow_position_comp
+                except ComponentNotFoundError:
+                    self.entity_manager.add_command(self.__kill_name, i.entity)
+                    return
             position_comp = i.get_component(Position)
             position_comp.value = follow_position_comp.value + self.__name_offset
+
+    def __kill_name(self, entity) -> None:
+        try:
+            self.entity_manager.kill_entity(entity)
+        except EntityNotFoundError:
+            pass
 
 
 class MoveToTargetSystem(BaseSystem):
