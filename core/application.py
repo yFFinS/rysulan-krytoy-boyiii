@@ -31,6 +31,10 @@ class Application:
         Profiler.begin_profile_session()
         World.default_world.create_all_systems()
         self.__is_running = True
+
+        Time.tick()
+        Time.tick()
+
         while self.__is_running:
             self.__screen.fill(BACKGROUND_COLOR)
 
