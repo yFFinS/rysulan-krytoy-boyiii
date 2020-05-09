@@ -6,6 +6,25 @@ from .core import SqlAlchemyBase
 from .core import sa
 from typing import Dict
 
+
+class EntryDeletionStack:
+    __to_delete: list = []
+
+    @staticmethod
+    def add(data: SqlAlchemyBase) -> None:
+        EntryDeletionStack.__to_delete.append(data)
+
+    @staticmethod
+    def delete_all() -> None:
+        session = Factory.get_or_create_session()
+        for i in EntryDeletionStack.__to_delete:
+            try:
+                session.delete(i)
+            except:
+                pass
+        EntryDeletionStack.__to_delete.clear()
+
+
 def create_entities_from_database() -> None:
     world = World.default_world
     manager = world.get_manager()
@@ -21,10 +40,12 @@ def create_entities_from_database() -> None:
 
 
 def save_to_database() -> None:
+    session = Factory.get_or_create_session()
+    EntryDeletionStack.delete_all()
+
     world = World.default_world
     manager = world.get_manager()
     comp_types = BaseComponent.__subclasses__()
-    session = Factory.get_or_create_session()
     comp_filter = manager.create_filter(required=(), additional=comp_types)
     for i in manager.get_entities().filter(comp_filter):
         entity = i.entity
@@ -33,18 +54,11 @@ def save_to_database() -> None:
             component.sql_entity_id = entity.get_id()
             try:
                 session.add(component)
-            except:
-                session.rollback()
-                print(component, "can't be added to db.")
+            except BaseException as e:
+                print(f"{component} can't be added to database. Reason: {e}")
 
+
+def close() -> None:
+    session = Factory.get_or_create_session()
     session.commit()
     session.close()
-
-
-class UserEntity(SqlAlchemyBase):
-    __tablename__ = "user_entities"
-    user_id = sa.Column(sa.String, primary_key=True, index=True)
-    entity_id = sa.Column(sa.Integer)
-
-
-def save_user_entities(data: )

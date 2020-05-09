@@ -26,6 +26,9 @@ class RenderSprite(BaseComponent):
         self.sprite.image = image.fromstring(self.sql_image, (self.sql_width, self.sql_height), "RGBA")
         self.sprite.rect = self.sprite.image.get_rect()
 
+    def on_remove(self) -> None:
+        self.sprite.kill()
+
 
 class Position(BaseComponent):
     sql_x = sa.Column(sa.Float, name="x")
@@ -45,18 +48,25 @@ class Position(BaseComponent):
 
 class TargetPosition(BaseComponent):
     __slots__ = ("value",)
-    sql_x = sa.Column(sa.Float, name="x")
-    sql_y = sa.Column(sa.Float, name="y")
+    sql_x = sa.Column(sa.Float, name="x", nullable=True)
+    sql_y = sa.Column(sa.Float, name="y", nullable=True)
 
     def __init__(self):
         self.value = None
 
     def from_database(self, entity_manager) -> None:
-        self.value = Vector(self.sql_x, self.sql_y)
+        if self.sql_x is not None and self.sql_y is not None:
+            self.value = Vector(self.sql_x, self.sql_y)
+        else:
+            self.value = None
 
     def to_database(self) -> None:
-        self.sql_x = self.value.x
-        self.sql_y = self.value.y
+        if self.value is not None:
+            self.sql_x = self.value.x
+            self.sql_y = self.value.y
+        else:
+            self.sql_x = None
+            self.sql_y = None
  
 
 class EntityName(BaseComponent):
@@ -135,3 +145,30 @@ class Hunger(BaseComponent):
 
 class BushTag(BaseComponent):
     pass
+
+
+class Rigidbody(BaseComponent):
+    __slots__ = ("radius", "velocity")
+    sql_radius = sa.Column(sa.Float, name="radius")
+    sql_velocity_x = sa.Column(sa.Float, name="velocity_x")
+    sql_velocity_y = sa.Column(sa.Float, name="velocity_y")
+
+    def from_database(self, entity_manager) -> None:
+        self.radius = self.sql_radius
+        self.velocity = Vector(self.sql_velocity_x, self.sql_velocity_y)
+
+    def to_database(self) -> None:
+        self.sql_radius = self.radius
+        self.sql_velocity_x = self.velocity.x
+        self.sql_velocity_y = self.velocity.y
+
+
+class Health(BaseComponent):
+    __slots__ = ("value",)
+    sql_health = sa.Column(sa.Float, name="health")
+
+    def from_database(self, entity_manager) -> None:
+        self.value = self.sql_health
+
+    def to_database(self) -> None:
+        self.sql_health = self.value
