@@ -1,8 +1,11 @@
 from random import randint
-from pygame import Surface, draw
+from pygame import Surface, draw, Color
 from .settings import *
 from ecs.entities import Entity
 from .components import *
+
+
+TEAM_COLORS = [Color("red"), Color("green"), Color("yellow"), Color("blue"), Color("purple")]
 
 
 def create_rect(width: int, height: int, fill_color, border_color=None, border_width=1):
@@ -27,7 +30,7 @@ def create_circle(radius: int, fill_color, border_color=None, border_width=1):
     return circle_sprite
 
 
-def create_creature(entity_manager: EntityManager, entity: Entity) -> None:
+def create_creature(entity_manager: EntityManager, entity: Entity, team: int = -1) -> None:
     pos_comp = Position()
     pos_comp.value = Vector(randint(-WORLD_SIZE, WORLD_SIZE), randint(-WORLD_SIZE, WORLD_SIZE))
 
@@ -35,7 +38,10 @@ def create_creature(entity_manager: EntityManager, entity: Entity) -> None:
     target_pos_comp.value = None
 
     render_comp = RenderSprite()
-    render_comp.sprite = create_circle(START_CREATURE_SIZE, START_CREATURE_COLOR,
+
+    team_comp = Team()
+    team_comp.value = team if 0 <= team < len(TEAM_COLORS) else 0
+    render_comp.sprite = create_circle(START_CREATURE_SIZE, TEAM_COLORS[team_comp.value],
                                        CREATURE_BORDER_COLOR, CREATURE_BORDER_WIDTH)
 
     move_speed_comp = MoveSpeed()
@@ -75,10 +81,11 @@ def create_food(entity_manager: EntityManager, entity: Entity) -> None:
     entity_manager.add_component(entity, BushTag())
 
 
-def create_named_creature(entity_manager: EntityManager, entity: Entity, name: str, font, color) -> None:
+def create_named_creature(entity_manager: EntityManager, entity: Entity,
+                          name: str, font, color, team: int = -1) -> None:
     name_entity = entity_manager.create_entity()
     follow_entity = entity
-    create_creature(entity_manager, follow_entity)
+    create_creature(entity_manager, follow_entity, team)
     name_comp = EntityName()
     name_comp.value = name
     name_comp.entity = follow_entity
