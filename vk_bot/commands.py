@@ -99,7 +99,7 @@ class CreateEntitiesCommand(BaseCommand):
         entity_manager = World.current_world.get_manager()
 
         def buffered_command():
-            c = max(0, min(count, 3000 - len(entity_manager.get_entities())))
+            c = max(0, min(count, 2000 - len(entity_manager.get_entities())))
             for i in range(c):
                 from simulation.utils import create_named_creature
                 entity = entity_manager.create_entity()
