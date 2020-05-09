@@ -1,6 +1,6 @@
 from ecs.entities import EntityManager
 from ecs.systems import BaseSystem
-from typing import Set, Type, TypeVar
+from typing import List, Type, TypeVar
 from core.profiling import profiled
 from core.main_timer import Time
 
@@ -27,7 +27,7 @@ class World:
         World.__current_id += 1
 
         self.__entity_manager = EntityManager()
-        self.__systems: Set[BaseSystem] = set()
+        self.__systems: List[BaseSystem] = []
 
         if World.current_world is None:
             World.current_world = self
@@ -53,7 +53,7 @@ class World:
         system = system_type()
         system.is_enabled = True
         system.entity_manager = self.__entity_manager
-        self.__systems.add(system)
+        self.__systems.append(system)
         system.on_create()
         return system
 
@@ -87,5 +87,6 @@ class World:
         for system_type in BaseSystem.__subclasses__():
             try:
                 self.create_system(system_type)
+                self.__systems.sort()
             except SystemExistsError:
                 pass
