@@ -1,15 +1,19 @@
-from typing import Dict, List, Type, TypeVar, Callable, Set
+from typing import Dict, List, Type, TypeVar, Callable, Set, Generic
 from ecs.component import BaseComponent
 from core.profiling import profiled
 
 
 class Entity:
     __current_id = 0
+    __free_ids: Set[int] = set()
     __slots__ = ("__id",)
 
     def __init__(self):
-        self.__id = Entity.__current_id
-        Entity.__current_id += 1
+        if not Entity.__free_ids:
+            self.__id = Entity.__current_id
+            Entity.__current_id += 1
+        else:
+            self.__id = Entity.__free_ids.pop()
 
     def get_id(self) -> int:
         return self.__id
@@ -78,13 +82,13 @@ class EntityContainer:
     __slots__ = ("__data",)
 
     def __init__(self):
-        self.__data: Dict[Entity, Set[BaseComponent]] = {}
+        self.__data: Dict[Entity, Set[BaseComponent]] = dict()
 
     def __getitem__(self, item):
         return self.__data[item]
 
     def has_entity(self, entity: Entity) -> bool:
-        return entity in self.__data
+        return entity in self.__data.keys()
 
     def add_entity(self, entity: Entity) -> None:
         if not self.has_entity(entity):
@@ -94,6 +98,11 @@ class EntityContainer:
 
     def remove_entity(self, entity: Entity) -> None:
         if self.has_entity(entity):
+            to_remove = []
+            for data in self.__data[entity]:
+                to_remove.append(type(data))
+            for i in to_remove:
+                self.remove_entity_data(entity, i)
             self.__data.pop(entity)
         else:
             raise EntityNotFoundError()
@@ -104,9 +113,19 @@ class EntityContainer:
         else:
             raise EntityNotFoundError()
 
-    def remove_entity_data(self, entity: Entity, data: BaseComponent) -> None:
+    def remove_entity_data(self, entity: Entity, data_type: Type[BaseComponent]) -> None:
         if self.has_entity(entity):
-            self.__data[entity].discard(data)
+            to_remove = None
+            for data in self.__data[entity]:
+                if type(data) == data_type:
+                    to_remove = data
+                    break
+            if to_remove is not None:
+                self.__data[entity].discard(to_remove)
+                from sql.data import EntryDeletionStack
+                EntryDeletionStack.add(to_remove)
+                to_remove.on_remove()
+
         else:
             raise EntityNotFoundError()
 
@@ -178,10 +197,10 @@ class EntityManager:
     def add_component(self, entity: Entity, component: BaseComponent) -> None:
         self.__container.add_entity_data(entity, component)
 
-    def get_component(self, entity: Entity, component_type: Type[TComponent]) -> TComponent:
+    def get_component(self, entity: Entity, component_type: Generic[TComponent]) -> TComponent:
         return self.__container.get_component(entity, component_type)
 
-    def remove_component(self, entity: Entity, component: BaseComponent) -> None:
+    def remove_component(self, entity: Entity, component: Type[BaseComponent]) -> None:
         self.__container.remove_entity_data(entity, component)
 
     def get_entities(self) -> EntityContainer:
