@@ -132,7 +132,7 @@ class HungerSystem(BaseSystem):
         self.hunger_time = 0
 
     def on_create(self) -> None:
-        self.filter = self.entity_manager.create_filter(required=(Hunger,), additional=(MoveSpeed,),
+        self.filter = self.entity_manager.create_filter(required=(Hunger,), additional=(MoveSpeed, Priority),
                                                         without=(DeadTag,))
 
     def on_update(self, delta_time: float) -> None:
@@ -144,9 +144,10 @@ class HungerSystem(BaseSystem):
                 hunger_comp.value -= 1
                 if speed_comp is not None:
                     hunger_comp.value -= speed_comp.value * SPEED_HUNGER_MULTIPLIER
-                # if hunger_comp.value <= EXTREME_HUNGER_VALUE:
-                #     priority_comp = i.get_component(Priority)
-                #     priority_comp.value = 'gathering'
+                if hunger_comp.value <= EXTREME_HUNGER_VALUE:
+                    priority_comp = i.get_component(Priority)
+                    if priority_comp:
+                        priority_comp.value = 'gathering'
                 if hunger_comp.value <= 0:
                     self.entity_manager.add_component(i.entity, DeadTag())
 
@@ -160,36 +161,81 @@ class GatheringSystem(BaseSystem):
 
     def on_create(self) -> None:
         self.filter = self.entity_manager.create_filter(required=(Position, TargetPosition, Hunger),
-                                                        additional=(Health,),
+                                                        additional=(Health, Priority),
                                                         without=(DeadTag,))
         self.filter2 = self.entity_manager.create_filter(required=(Position, BushTag),
                                                          without=(DeadTag,))
 
     def on_update(self, delta_time: float) -> None:
-        self.gathering_time += delta_time
-        bush_pos = []
-        if self.gathering_time >= 1:
-            for i in self.query(self.filter2):
-                bush_pos_comp = i.get_component(Position)
-                bush_pos.append((i.entity, bush_pos_comp.value))
-            if not bush_pos:
-                return
-            for i in self.query(self.filter):
-                creature_pos_comp = i.get_component(Position)
-                creature_target_comp = i.get_component(TargetPosition)
-                hp_comp = i.get_component(Health)
-                closest_bush = bush_pos[0]
-                for j in bush_pos:
-                    if (creature_pos_comp.value - j[1]).sqr_len() < (creature_pos_comp.value - closest_bush[1]).sqr_len():
-                        closest_bush = j
-                creature_target_comp.value = closest_bush[1]
-                if (creature_target_comp.value - creature_pos_comp.value).sqr_len() <= EAT_DISTANCE:
-                    hunger_comp = i.get_component(Hunger)
-                    hunger_comp.value += BUSH_FOOD_VALUE
-                    if hp_comp is not None:
-                        hp_comp.value += BUSH_FOOD_VALUE
-                    self.entity_manager.add_component(closest_bush[0], DeadTag())
-            self.gathering_time = 0
+        for i in self.query(self.filter):
+            priority_comp = i.get_component(Priority)
+            if not priority_comp:
+                continue
+            if priority_comp.value == 'gathering':
+                self.gathering_time += delta_time
+                bush_pos = []
+                if self.gathering_time >= 1:
+                    for i in self.query(self.filter2):
+                        bush_pos_comp = i.get_component(Position)
+                        bush_pos.append((i.entity, bush_pos_comp.value))
+                    if not bush_pos:
+                        return
+                    for i in self.query(self.filter):
+                        creature_pos_comp = i.get_component(Position)
+                        creature_target_comp = i.get_component(TargetPosition)
+                        hp_comp = i.get_component(Health)
+                        closest_bush = bush_pos[0]
+                        for j in bush_pos:
+                            if (creature_pos_comp.value - j[1]).sqr_len() < (creature_pos_comp.value - closest_bush[1]).sqr_len():
+                                closest_bush = j
+                        creature_target_comp.value = closest_bush[1]
+                        if (creature_target_comp.value - creature_pos_comp.value).sqr_len() <= EAT_DISTANCE:
+                            hunger_comp = i.get_component(Hunger)
+                            hunger_comp.value += BUSH_FOOD_VALUE
+                            if hp_comp is not None:
+                                hp_comp.value += BUSH_FOOD_VALUE
+                            self.entity_manager.add_component(closest_bush[0], DeadTag())
+                    self.gathering_time = 0
+
+
+class HuntingSystem(BaseSystem):
+
+    def __init__(self):
+        self.hunting_time = 1
+
+    def on_create(self) -> None:
+        self.filter = self.entity_manager.create_filter(required=(Position, TargetPosition, Hunger),
+                                                        additional=(Health, Strength, Priority),
+                                                        without=(DeadTag,))
+
+    def on_update(self, delta_time: float) -> None:
+        for i in self.query(self.filter):
+            priority_comp = i.get_component(Priority)
+            if not priority_comp:
+                continue
+            if priority_comp.value == 'hunting':
+                self.hunting_time += delta_time
+                creature_pos = []
+                if self.hunting_time >= 1:
+                    for i in self.query(self.filter):
+                        creature_pos_comp = i.get_component(Position)
+                        creature_strength_comp = i.get_component(Strength)
+                        creature_pos.append((i.entity, creature_pos_comp.value, creature_strength_comp.value))
+                    if not creature_pos:
+                        return
+                    for i in self.query(self.filter):
+                        creature_pos_comp = i.get_component(Position)
+                        creature_target_comp = i.get_component(TargetPosition)
+                        hp_comp = i.get_component(Health)
+                        creature_strength_comp = i.get_component(Strength)
+                        creature_strength = creature_strength_comp.value
+                        closest_creature = creature_pos[0]
+                        for j in creature_pos:
+                            if (creature_pos_comp.value - j[1]).sqr_len() <\
+                                    (creature_pos_comp.value - closest_creature[1]).sqr_len() and creature_strength > j[2]:
+                                closest_creature = j
+                        creature_target_comp.value = closest_creature[1]
+                    self.hunting_time = 0
 
 
 class PositionLimitSystem(BaseSystem):
@@ -214,7 +260,7 @@ class CollisionSystem(BaseSystem):
 
     def on_create(self) -> None:
         self.filter = self.entity_manager.create_filter(required=(Position, Rigidbody),
-                                                        additional=(Strength, Health, Team))
+                                                        additional=(Strength, Health, Team, Hunger))
         self.physics_multiplier = 0.01
 
     def on_update(self, delta_time: float) -> None:
@@ -250,6 +296,9 @@ class CollisionSystem(BaseSystem):
                         if other_hp is not None:
                             other_hp.value -= strength
                             if other_hp.value <= 0:
+                                hunger_comp = i.get_component(Hunger)
+                                hunger_comp.value += MEAT_FOOD_VALUE
+                                health_comp.value += KILL_TREATMENT
                                 self.entity_manager.add_component(ent, DeadTag())
 
             colliders.append((i.entity, radius, position, vel, strength, health_comp, team))
