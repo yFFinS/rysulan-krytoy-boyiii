@@ -77,6 +77,7 @@ class EntityName(BaseComponent):
     def __init__(self):
         self.value = None
         self.entity = None
+        self.user_id = None
 
     def from_database(self, entity_manager: EntityManager) -> None:
         self.value = self.sql_name
@@ -85,6 +86,17 @@ class EntityName(BaseComponent):
     def to_database(self) -> None:
         self.sql_name = self.value
         self.sql_linked_entity_id = self.entity.get_id()
+
+
+class UserId(BaseComponent):
+    __slots__ = ("value",)
+    sql_user_id = sa.Column(sa.String, name="user_id")
+
+    def from_database(self, entity_manager) -> None:
+        self.value = self.sql_user_id
+
+    def to_database(self) -> None:
+        self.sql_user_id = self.value
 
 
 class MoveSpeed(BaseComponent):

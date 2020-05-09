@@ -128,9 +128,46 @@ class CreateNamedEntitiesCommand(BaseCommand):
 
         def buffered_command():
             from simulation.utils import create_named_creature
-            create_named_creature(entity_manager, entity_manager.create_entity(), name, data["peer_id"],
-                                  self.__font, self.__name_color)
+            from simulation.components import UserId
+            entity = entity_manager.create_entity()
+            create_named_creature(entity_manager, entity, name, self.__font, self.__name_color)
+            id_comp = UserId()
+            id_comp.value = data["peer_id"]
+            entity_manager.add_component(entity, id_comp)
 
             methods.send_message(data["peer_id"], "Существо создано.")
 
         entity_manager.add_command(buffered_command)
+
+
+class StatsCommand(BaseCommand):
+    _name = "stats"
+    _description = "показывает характеристики вашего существа"
+    _event_data = ("peer_id",)
+
+    def on_call(self, data: dict, args: dict, methods: BotMethods) -> None:
+        from simulation.components import UserId, MoveSpeed, Strength, Health, Hunger
+        user_id = data["peer_id"]
+        entity_manager = World.default_world.get_manager()
+        data_filter = entity_manager.create_filter(required=(UserId,),
+                                                   additional=(MoveSpeed, Strength, Health, Hunger))
+        message = []
+        for i in entity_manager.get_entities().filter(data_filter):
+            if i.get_component(UserId).value != user_id:
+                continue
+            stat_comp = i.get_component(Health)
+            if stat_comp is not None:
+                message.append(f"Здоровье: {stat_comp.value}")
+            stat_comp = i.get_component(Strength)
+            if stat_comp is not None:
+                message.append(f"Сила: {stat_comp.value}")
+            stat_comp = i.get_component(MoveSpeed)
+            if stat_comp is not None:
+                message.append(f"Скорость: {stat_comp.value}")
+            stat_comp = i.get_component(Hunger)
+            if stat_comp is not None:
+                message.append(f"Сытость: {stat_comp.value}")
+            break
+        if not message:
+            message.append("Вы не создали сущесвто.\nСоздайте его с пошощью команды creature {имя}.")
+        methods.send_message(user_id, "\n".join(message))
