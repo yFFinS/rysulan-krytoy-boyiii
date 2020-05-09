@@ -8,7 +8,7 @@ class BaseComponent(SqlAlchemyBase):
     __slots__ = ()
 
     @declared_attr
-    def __tablename__(self):
+    def __tablename__(self) -> str:
         return self.__name__.lower()
 
     def to_database(self) -> None:
@@ -17,3 +17,5 @@ class BaseComponent(SqlAlchemyBase):
     def from_database(self, entity_manager) -> None:
         pass
 
+    def on_remove(self) -> None:
+        pass
