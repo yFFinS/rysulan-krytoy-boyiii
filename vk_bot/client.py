@@ -35,7 +35,7 @@ class Client:
                     self.__session = VkApi(token=line_data[-1])
             self.__long_poll = VkBotLongPoll(self.__session, self.__group_id)
         self.__methods = BotMethods(self.__session)
-        self.__commands = {}
+        self.__commands = dict()
         for command_type in BaseCommand.__subclasses__():
             command = command_type()
             self.__commands[command.get_name()] = command
