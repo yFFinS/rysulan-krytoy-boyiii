@@ -84,9 +84,12 @@ class World:
 
     def create_all_systems(self) -> None:
         import simulation.__all_systems
+        count = 0
         for system_type in BaseSystem.__subclasses__():
             try:
                 self.create_system(system_type)
+                count += 1
                 self.__systems.sort()
             except SystemExistsError:
                 pass
+        print(f"Created {count} systems.")

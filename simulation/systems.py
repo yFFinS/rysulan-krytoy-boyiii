@@ -133,6 +133,7 @@ class HungerSystem(BaseSystem):
 
     def on_create(self) -> None:
         self.filter = self.entity_manager.create_filter(required=(Hunger,), additional=(MoveSpeed, Priority),
+        self.filter = self.entity_manager.create_filter(required=(Hunger,), additional=(MoveSpeed,),
                                                         without=(DeadTag,))
 
     def on_update(self, delta_time: float) -> None:
@@ -162,6 +163,7 @@ class GatheringSystem(BaseSystem):
     def on_create(self) -> None:
         self.filter = self.entity_manager.create_filter(required=(Position, TargetPosition, Hunger),
                                                         additional=(Health, Priority),
+                                                        additional=(Health,),
                                                         without=(DeadTag,))
         self.filter2 = self.entity_manager.create_filter(required=(Position, BushTag),
                                                          without=(DeadTag,))
@@ -261,6 +263,7 @@ class CollisionSystem(BaseSystem):
     def on_create(self) -> None:
         self.filter = self.entity_manager.create_filter(required=(Position, Rigidbody),
                                                         additional=(Strength, Health, Team, Hunger))
+                                                        additional=(Strength, Health, Team))
         self.physics_multiplier = 0.01
 
     def on_update(self, delta_time: float) -> None:
