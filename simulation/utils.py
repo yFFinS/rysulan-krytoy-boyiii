@@ -60,6 +60,9 @@ def create_creature(entity_manager: EntityManager, entity: Entity, team: int = -
     hp_comp = Health()
     hp_comp.value = randint(50, 151)
 
+    priority_comp = Priority()
+    priority_comp.value = 'gathering'
+
     entity_manager.add_component(entity, pos_comp)
     entity_manager.add_component(entity, render_comp)
     entity_manager.add_component(entity, target_pos_comp)
@@ -68,6 +71,7 @@ def create_creature(entity_manager: EntityManager, entity: Entity, team: int = -
     entity_manager.add_component(entity, rb_comp)
     entity_manager.add_component(entity, str_comp)
     entity_manager.add_component(entity, hp_comp)
+    entity_manager.add_component(entity, priority_comp)
 
 
 def create_food(entity_manager: EntityManager, entity: Entity) -> None:

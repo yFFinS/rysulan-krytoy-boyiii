@@ -102,7 +102,7 @@ class CreateEntitiesCommand(BaseCommand):
         count = args["число"]
         entity_manager = World.current_world.get_manager()
         data_filter = entity_manager.create_filter(required=(Rigidbody,))
-
+        
         def buffered_command():
             c = max(0, min(count, MAX_CREATURES - len(entity_manager.get_entities().filter(data_filter))))
             for i in range(c):
@@ -154,7 +154,6 @@ class StatsCommand(BaseCommand):
 
     def on_call(self, data: dict, args: dict, methods: BotMethods) -> None:
         from simulation.components import UserId, MoveSpeed, Strength, Health, Hunger
-
         user_id = data["peer_id"]
         entity_manager = World.default_world.get_manager()
         data_filter = entity_manager.create_filter(required=(UserId,),
