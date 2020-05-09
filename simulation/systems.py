@@ -242,8 +242,8 @@ class CollisionSystem(BaseSystem):
                 direction = (other_position - position).normalized()
                 sqr_dist = (other_position - position).sqr_len()
                 if sqr_dist < (radius + other_radius) * (radius + other_radius):
-                    vel -= direction * (delta_time * PUSH_MULTIPLIER * sqr_dist * strength)
-                    other_vel += direction * (delta_time * PUSH_MULTIPLIER * sqr_dist * other_strength)
+                    vel -= direction * (delta_time * PUSH_MULTIPLIER * sqr_dist * other_strength)
+                    other_vel += direction * (delta_time * PUSH_MULTIPLIER * sqr_dist * strength)
                     if health_comp is not None:
                         health_comp.value -= other_strength
                         if health_comp.value <= 0:
