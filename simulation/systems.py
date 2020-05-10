@@ -4,7 +4,6 @@ from random import random, randint
 import pygame
 
 from core.input import Mouse
-from ecs.entities import ComponentNotFoundError
 from ecs.entities import EntityNotFoundError
 from ecs.systems import BaseSystem
 from ecs.world import World
@@ -20,7 +19,7 @@ class RenderSystem(BaseSystem):
         self.__sprites = pygame.sprite.Group()
         self.__render_surface = None
         from core.application import WIDTH, HEIGHT
-        self.camera_position: Vector = Vector(WIDTH / 2, HEIGHT / 2)
+        self.camera_position: Vector = -Vector(WIDTH / 2, HEIGHT / 2)
         self.filter = None
 
     def on_create(self):
@@ -39,7 +38,7 @@ class RenderSystem(BaseSystem):
 
             position_comp = i.get_component(Position)
             cached_positions.append((render_comp.sprite, position_comp.value.to_tuple()))
-            render_comp.sprite.rect.center = (position_comp.value + self.camera_position).to_tuple()
+            render_comp.sprite.rect.center = (position_comp.value - self.camera_position).to_tuple()
 
         self.__sprites.draw(self.__render_surface)
 
@@ -64,7 +63,7 @@ class MouseDragSystem(BaseSystem):
             self.__drag_position = Mouse.get_position()
         if self.__drag_position is not None and Mouse.is_mouse():
             offset = Mouse.get_position() - self.__drag_position
-            self.__render_system.camera_position = self.__prev_camera_position + offset
+            self.__render_system.camera_position = self.__prev_camera_position - offset
         elif Mouse.is_mouse_up():
             self.__drag_position = None
             self.__prev_camera_position = self.__render_system.camera_position
@@ -72,31 +71,43 @@ class MouseDragSystem(BaseSystem):
 
 class EntityNameFollowSystem(BaseSystem):
 
+    __update_order__ = 102
+
     def __init__(self):
         self.__cached_positions = dict()
         self.__name_offset = Vector(0, -18)
         self.filter = None
+        self.__sprites = None
+        self.__cache = dict()
+        self.__font = None
+        self.__render_surface = None
+        self.__render_system = None
 
     def on_create(self) -> None:
-        self.filter = self.entity_manager.create_filter(required=(Position, EntityName),
-                                                        without=(DeadTag,))
+        from core.application import Application
+        self.__render_surface = Application.get_render_surface()
+        self.__render_system = World.current_world.get_or_create_system(RenderSystem)
+        self.__sprites = pygame.sprite.Group()
+        self.__font = pygame.font.Font(None, NAME_FONT_SIZE)
+        self.filter = self.entity_manager.create_filter(required=(Position, EntityName), additional=(DeadTag,))
 
     def on_update(self, delta_time: float) -> None:
         for i in self.query(self.filter):
-            entity = i.get_component(EntityName).entity
-            if not self.entity_manager.has_entity(entity):
-                self.entity_manager.add_component(i.entity, DeadTag())
-                return
-            follow_position_comp = self.__cached_positions.get(entity, None)
-            if follow_position_comp is None:
-                try:
-                    follow_position_comp = self.entity_manager.get_component(entity, Position)
-                    self.__cached_positions[entity] = follow_position_comp
-                except ComponentNotFoundError:
-                    self.entity_manager.add_component(i.entity, DeadTag())
-                    return
-            position_comp = i.get_component(Position)
-            position_comp.value = follow_position_comp.value + self.__name_offset
+            name = i.get_component(EntityName).value
+            if i.get_component(DeadTag) is not None:
+                self.__cache[name].kill()
+                self.__cache.pop(name)
+                continue
+            name_sprite = self.__cache.get(name, None)
+            if name_sprite is None:
+                text = self.__font.render(name, True, NAME_COLOR)
+                name_sprite = sprite.Sprite(self.__sprites)
+                name_sprite.image = text
+                name_sprite.rect = text.get_rect()
+                self.__cache[name] = name_sprite
+            pos = i.get_component(Position).value
+            name_sprite.rect.center = (pos + self.__name_offset - self.__render_system.camera_position).to_tuple()
+        self.__sprites.draw(self.__render_surface)
 
 
 class MoveToTargetSystem(BaseSystem):
@@ -257,13 +268,13 @@ class HuntingSystem(BaseSystem):
 
 
 class PositionLimitSystem(BaseSystem):
-    __update_order__ = 5
+    __update_order__ = 100
 
     def __init__(self):
         self.filter = None
 
     def on_create(self) -> None:
-        self.filter = self.entity_manager.create_filter(required=(Position,), without=(EntityName,))
+        self.filter = self.entity_manager.create_filter(required=(Position,))
 
     def on_update(self, delta_time: float) -> None:
         for i in self.query(self.filter):
@@ -388,7 +399,8 @@ class MouseHoverInfoSystem(BaseSystem):
         if Mouse.is_mouse_down():
             self.__locked_entity = None
         for i in self.query(self.filter):
-            entity_pos = i.get_component(Position).value + self.__render_system.camera_position
+            pos = i.get_component(Position).value
+            entity_pos = pos - self.__render_system.camera_position
             if (entity_pos - mouse_pos).sqr_len() <= 65 or self.__locked_entity is not None:
                 if Mouse.is_mouse_down():
                     self.__locked_entity = i.entity
@@ -397,6 +409,8 @@ class MouseHoverInfoSystem(BaseSystem):
                 text = []
                 comp = i.get_component(MoveSpeed)
                 text.append(f"Entity id: {i.entity.get_id()}")
+                rx, ry = "%.1f" % pos.x, "%.1f" % pos.y
+                text.append(f"Position: ({rx}, {ry})")
                 if comp is not None:
                     text.append(f"Speed: {'%.2f' % comp.value}")
                 comp = i.get_component(Hunger)
@@ -421,7 +435,7 @@ class MouseHoverInfoSystem(BaseSystem):
 
 
 class DrawWorldBordersSystem(BaseSystem):
-    __update_order__ = 150
+    __update_order__ = 101
 
     def __init__(self):
         from simulation.utils import create_circle
@@ -435,7 +449,7 @@ class DrawWorldBordersSystem(BaseSystem):
         self.__render_system = World.current_world.get_or_create_system(RenderSystem)
 
     def on_update(self, delta_time: float) -> None:
-        self.__sprite.rect.center = self.__render_system.camera_position.to_tuple()
+        self.__sprite.rect.center = (-self.__render_system.camera_position).to_tuple()
         self.__group.draw(self.__render_surface)
 
 
@@ -443,10 +457,13 @@ class KillSystem(BaseSystem):
     __update_order__ = 200
 
     def __init__(self):
+        self.__methods = None
         self.filter = None
 
     def on_create(self) -> None:
-        self.filter = self.entity_manager.create_filter(required=(DeadTag,))
+        from vk_bot.commands import BotMethods
+        self.__methods = BotMethods
+        self.filter = self.entity_manager.create_filter(required=(DeadTag,), additional=(UserId,))
 
     def on_update(self, delta_time: float) -> None:
         to_kill = set()
@@ -457,6 +474,10 @@ class KillSystem(BaseSystem):
     def __kill(self, entities) -> None:
         try:
             for entity in entities:
+                id_comp = self.entity_manager.get_component(entity, UserId)
+                if id_comp is not None:
+                    name = self.entity_manager.get_component(entity, EntityName).value
+                    self.__methods.send_message(id_comp.value, f"{name} умер. Жаль!!")
                 self.entity_manager.kill_entity(entity)
         except EntityNotFoundError:
             pass
@@ -477,3 +498,18 @@ class BotCreationSystem(BaseSystem):
         entity = self.entity_manager.create_entity()
         create_named_creature(self.entity_manager, entity,
                               "Bot" + str(entity.get_id()), randint(0, len(TEAM_COLORS) - 1))
+
+
+class BackupSystem(BaseSystem):
+
+    def __init__(self):
+        from sql.data import save_to_database
+        self.time = 0
+        self.backup_func = save_to_database
+
+    def on_update(self, delta_time: float) -> None:
+        self.time += delta_time
+        if self.time >= BACKUP_DELAY:
+            self.backup_func()
+            print("saved")
+            self.time = 0
