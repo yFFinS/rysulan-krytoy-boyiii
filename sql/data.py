@@ -49,7 +49,7 @@ def save_to_database() -> None:
     comp_filter = manager.create_filter(required=(), additional=comp_types)
     for i in manager.get_entities().filter(comp_filter):
         entity = i.entity
-        for component in i.components:
+        for component in i.components.values():
             component.to_database()
             component.sql_entity_id = entity.get_id()
             try:

@@ -38,17 +38,15 @@ TComponent = TypeVar("TComponent", bound=BaseComponent)
 
 
 class ComponentDataArray:
-    __slots__ = ("entity", "components")
+    __slots__ = ("entity", "components", "__cache")
 
-    def __init__(self, entity: Entity, component: List[BaseComponent]):
+    def __init__(self, entity: Entity, components: List[BaseComponent]):
         self.entity = entity
-        self.components = component
+        self.components = {type(comp): comp for comp in components}
 
     @profiled
     def get_component(self, component_type: Type[TComponent]) -> TComponent:
-        for existing_component in self.components:
-            if type(existing_component) == component_type:
-                return existing_component
+        return self.components.get(component_type, None)
 
 
 class ComponentDataFilter:
@@ -117,6 +115,7 @@ class EntityContainer:
         else:
             raise EntityExistsError()
 
+    @profiled
     def remove_entity(self, entity: Entity) -> None:
         if self.has_entity(entity):
             to_remove = []
@@ -165,9 +164,9 @@ class EntityContainer:
             raise ComponentNotFoundError()
 
     @profiled
-    def get_entity(self, id: int) -> Entity:
+    def get_entity(self, entity_id: int) -> Entity:
         for entity in self.__data.keys():
-            if entity.get_id() == id:
+            if entity.get_id() == entity_id:
                 return entity
         raise EntityNotFoundError()
 
