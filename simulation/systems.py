@@ -1,24 +1,27 @@
-from ecs.systems import BaseSystem
-from .__all_components import *
-from core.input import Mouse
-from ecs.world import World
-from simulation.math import Vector
+from math import ceil
+from random import random, randint
+
 import pygame
-from .utils import create_food
-from .settings import *
-from ecs.entities import EntityNotFoundError
-from random import random
+
+from core.input import Mouse
 from ecs.entities import ComponentNotFoundError
+from ecs.entities import EntityNotFoundError
+from ecs.systems import BaseSystem
+from ecs.world import World
+from .__all_components import *
+from .settings import *
+from .utils import create_food, create_named_creature, TEAM_COLORS
 
 
 class RenderSystem(BaseSystem):
-
     __update_order__ = 100
 
     def __init__(self):
         self.__sprites = pygame.sprite.Group()
         self.__render_surface = None
-        self.camera_position: Vector = Vector(WORLD_SIZE / 2, WORLD_SIZE / 2)
+        from core.application import WIDTH, HEIGHT
+        self.camera_position: Vector = Vector(WIDTH / 2, HEIGHT / 2)
+        self.filter = None
 
     def on_create(self):
         from core.application import Application
@@ -27,7 +30,7 @@ class RenderSystem(BaseSystem):
                                                         without=(DeadTag,))
 
     def on_update(self, delta_time: float):
-        __cached_positions = []
+        cached_positions = []
         for i in self.query(self.filter):
 
             render_comp = i.get_component(RenderSprite)
@@ -35,12 +38,12 @@ class RenderSystem(BaseSystem):
                 self.__sprites.add(render_comp.sprite)
 
             position_comp = i.get_component(Position)
-            __cached_positions.append((render_comp.sprite, position_comp.value.to_tuple()))
+            cached_positions.append((render_comp.sprite, position_comp.value.to_tuple()))
             render_comp.sprite.rect.center = (position_comp.value + self.camera_position).to_tuple()
 
         self.__sprites.draw(self.__render_surface)
 
-        for i in __cached_positions:
+        for i in cached_positions:
             i[0].rect.center = i[1]
 
 
@@ -72,6 +75,7 @@ class EntityNameFollowSystem(BaseSystem):
     def __init__(self):
         self.__cached_positions = dict()
         self.__name_offset = Vector(0, -18)
+        self.filter = None
 
     def on_create(self) -> None:
         self.filter = self.entity_manager.create_filter(required=(Position, EntityName),
@@ -97,6 +101,9 @@ class EntityNameFollowSystem(BaseSystem):
 
 class MoveToTargetSystem(BaseSystem):
 
+    def __init__(self):
+        self.filter = None
+
     def on_create(self) -> None:
         self.filter = self.entity_manager.create_filter(required=(MoveSpeed, Position, TargetPosition),
                                                         without=(DeadTag,))
@@ -106,11 +113,13 @@ class MoveToTargetSystem(BaseSystem):
             target_pos_comp = i.get_component(TargetPosition)
             pos_comp = i.get_component(Position)
             if target_pos_comp.value is not None:
-                if (target_pos_comp.value - pos_comp.value).sqr_len() > 3:
+                target_pos = target_pos_comp.value
+                pos = pos_comp.value
+                if (target_pos - pos).sqr_len() > 4:
                     speed = i.get_component(MoveSpeed).value
-                    pos_comp.value += (target_pos_comp.value - pos_comp.value).normalized() * (speed * delta_time)
+                    pos += (target_pos - pos).normalized() * (speed * delta_time)
                 else:
-                    pos_comp.value = Vector.clone(target_pos_comp.value)
+                    pos_comp.value = Vector.clone(target_pos)
                     target_pos_comp.value = None
 
 
@@ -118,22 +127,27 @@ class CreateFood(BaseSystem):
 
     def __init__(self):
         self.time = 3
+        self.filter = None
+
+    def on_create(self) -> None:
+        self.filter = self.entity_manager.create_filter(required=(BushTag,))
 
     def on_update(self, delta_time: float) -> None:
         self.time += delta_time
         if self.time >= FOOD_CREATE_DELAY:
-            self.entity_manager.add_command(create_food, self.entity_manager, self.entity_manager.create_entity())
-            self.time = 0
+            if len(self.query(self.filter)) <= MAX_FOOD:
+                self.entity_manager.add_command(create_food, self.entity_manager, self.entity_manager.create_entity())
+                self.time = 0
 
-            
+
 class HungerSystem(BaseSystem):
 
     def __init__(self):
         self.hunger_time = 0
+        self.filter = None
 
     def on_create(self) -> None:
         self.filter = self.entity_manager.create_filter(required=(Hunger,), additional=(MoveSpeed, Priority),
-        self.filter = self.entity_manager.create_filter(required=(Hunger,), additional=(MoveSpeed,),
                                                         without=(DeadTag,))
 
     def on_update(self, delta_time: float) -> None:
@@ -159,115 +173,118 @@ class GatheringSystem(BaseSystem):
 
     def __init__(self):
         self.gathering_time = 1
+        self.filter = None
+        self.filter2 = None
 
     def on_create(self) -> None:
         self.filter = self.entity_manager.create_filter(required=(Position, TargetPosition, Hunger),
                                                         additional=(Health, Priority),
-                                                        additional=(Health,),
                                                         without=(DeadTag,))
         self.filter2 = self.entity_manager.create_filter(required=(Position, BushTag),
                                                          without=(DeadTag,))
 
     def on_update(self, delta_time: float) -> None:
-        for i in self.query(self.filter):
-            priority_comp = i.get_component(Priority)
-            if not priority_comp:
-                continue
-            if priority_comp.value == 'gathering':
-                self.gathering_time += delta_time
-                bush_pos = []
-                if self.gathering_time >= 1:
-                    for i in self.query(self.filter2):
-                        bush_pos_comp = i.get_component(Position)
-                        bush_pos.append((i.entity, bush_pos_comp.value))
-                    if not bush_pos:
-                        return
-                    for i in self.query(self.filter):
-                        creature_pos_comp = i.get_component(Position)
-                        creature_target_comp = i.get_component(TargetPosition)
-                        hp_comp = i.get_component(Health)
-                        closest_bush = bush_pos[0]
-                        for j in bush_pos:
-                            if (creature_pos_comp.value - j[1]).sqr_len() < (creature_pos_comp.value - closest_bush[1]).sqr_len():
-                                closest_bush = j
-                        creature_target_comp.value = closest_bush[1]
-                        if (creature_target_comp.value - creature_pos_comp.value).sqr_len() <= EAT_DISTANCE:
-                            hunger_comp = i.get_component(Hunger)
-                            hunger_comp.value += BUSH_FOOD_VALUE
-                            if hp_comp is not None:
-                                hp_comp.value += BUSH_FOOD_VALUE
-                            self.entity_manager.add_component(closest_bush[0], DeadTag())
-                    self.gathering_time = 0
+        self.gathering_time += delta_time
+        if self.gathering_time >= 1:
+            bush_pos = []
+            for i in self.query(self.filter2):
+                bush_pos_comp = i.get_component(Position)
+                bush_pos.append((i.entity, bush_pos_comp.value))
+            if not bush_pos:
+                return
+            for i in self.query(self.filter):
+                priority = i.get_component(Priority)
+                if priority is not None and priority.value != "gathering":
+                    continue
+                creature_pos_comp = i.get_component(Position)
+                creature_target_comp = i.get_component(TargetPosition)
+                hp_comp = i.get_component(Health)
+                closest_bush = bush_pos[0]
+                for j in bush_pos:
+                    if (creature_pos_comp.value - j[1]).sqr_len() < (
+                            creature_pos_comp.value - closest_bush[1]).sqr_len():
+                        closest_bush = j
+                creature_target_comp.value = closest_bush[1]
+                if (creature_target_comp.value - creature_pos_comp.value).sqr_len() <= EAT_DISTANCE:
+                    hunger_comp = i.get_component(Hunger)
+                    hunger_comp.value += BUSH_FOOD_VALUE
+                    if hp_comp is not None:
+                        hp_comp.value += BUSH_FOOD_VALUE
+                    self.entity_manager.add_component(closest_bush[0], DeadTag())
+            self.gathering_time = 0
 
 
 class HuntingSystem(BaseSystem):
 
     def __init__(self):
+        self.filter = None
         self.hunting_time = 1
 
     def on_create(self) -> None:
-        self.filter = self.entity_manager.create_filter(required=(Position, TargetPosition, Hunger),
-                                                        additional=(Health, Strength, Priority),
+        self.filter = self.entity_manager.create_filter(required=(Position, TargetPosition, Hunger, Strength, Health),
+                                                        additional=(Priority,),
                                                         without=(DeadTag,))
 
     def on_update(self, delta_time: float) -> None:
-        for i in self.query(self.filter):
-            priority_comp = i.get_component(Priority)
-            if not priority_comp:
-                continue
-            if priority_comp.value == 'hunting':
-                self.hunting_time += delta_time
-                creature_pos = []
-                if self.hunting_time >= 1:
-                    for i in self.query(self.filter):
-                        creature_pos_comp = i.get_component(Position)
-                        creature_strength_comp = i.get_component(Strength)
-                        creature_pos.append((i.entity, creature_pos_comp.value, creature_strength_comp.value))
-                    if not creature_pos:
-                        return
-                    for i in self.query(self.filter):
-                        creature_pos_comp = i.get_component(Position)
-                        creature_target_comp = i.get_component(TargetPosition)
-                        hp_comp = i.get_component(Health)
-                        creature_strength_comp = i.get_component(Strength)
-                        creature_strength = creature_strength_comp.value
-                        closest_creature = creature_pos[0]
-                        for j in creature_pos:
-                            if (creature_pos_comp.value - j[1]).sqr_len() <\
-                                    (creature_pos_comp.value - closest_creature[1]).sqr_len() and creature_strength > j[2]:
-                                closest_creature = j
-                        creature_target_comp.value = closest_creature[1]
-                    self.hunting_time = 0
+        self.hunting_time += delta_time
+        if self.hunting_time >= 1:
+            creatures = tuple(self.query(self.filter))
+            for i in creatures:
+                priority_comp = i.get_component(Priority)
+                if priority_comp is not None and priority_comp.value != 'hunting':
+                    continue
+                hp_comp = i.get_component(Health)
+                if hp_comp.value < 100:
+                    continue
+
+                pos_comp = i.get_component(Position)
+                target_comp = i.get_component(TargetPosition)
+                strength = i.get_component(Strength).value
+
+                closest_pos = creatures[0].get_component(Position).value
+
+                for j in creatures:
+                    if j == i:
+                        continue
+                    pos = j.get_component(Position).value
+
+                    if (pos_comp.value - pos).sqr_len() < (pos_comp.value - closest_pos).sqr_len()\
+                            and j.get_component(Health).value / strength\
+                            >= hp_comp.value / j.get_component(Strength).value:
+                        closest_pos = pos
+                target_comp.value = closest_pos
+            self.hunting_time = 0
 
 
 class PositionLimitSystem(BaseSystem):
-
     __update_order__ = 5
 
+    def __init__(self):
+        self.filter = None
+
     def on_create(self) -> None:
-        self.filter = self.entity_manager.create_filter(required=(Position,))
+        self.filter = self.entity_manager.create_filter(required=(Position,), without=(EntityName,))
 
     def on_update(self, delta_time: float) -> None:
         for i in self.query(self.filter):
             pos_comp = i.get_component(Position)
-            pos_comp.value.x = self.__clamp(pos_comp.value.x)
-            pos_comp.value.y = self.__clamp(pos_comp.value.y)
-
-    @staticmethod
-    def __clamp(value: float) -> float:
-        return min(max(-WORLD_SIZE, value), WORLD_SIZE)
+            pos_comp.value = pos_comp.value.normalized() * min(pos_comp.value.len(), WORLD_SIZE)
 
 
 class CollisionSystem(BaseSystem):
+    __update_order__ = -5
+
+    def __init__(self):
+        self.filter = None
+        self.simplification_value = 10
 
     def on_create(self) -> None:
         self.filter = self.entity_manager.create_filter(required=(Position, Rigidbody),
                                                         additional=(Strength, Health, Team, Hunger))
-                                                        additional=(Strength, Health, Team))
-        self.physics_multiplier = 0.01
 
     def on_update(self, delta_time: float) -> None:
-        colliders = []
+        colliders = dict()
+
         for i in self.query(self.filter):
             rigidbody_comp = i.get_component(Rigidbody)
             radius = rigidbody_comp.radius
@@ -280,15 +297,22 @@ class CollisionSystem(BaseSystem):
             team = team_comp.value if team_comp is not None else 0
 
             position = i.get_component(Position).value
-            for ent, other_radius, other_position, other_vel, other_strength, other_hp, other_team in colliders:
-
-                direction = (other_position - position).normalized()
-                sqr_dist = (other_position - position).sqr_len()
-
-                if sqr_dist < (radius + other_radius) * (radius + other_radius):
-
-                    vel -= direction * (self.physics_multiplier * PUSH_MULTIPLIER * sqr_dist * other_strength)
-                    other_vel += direction * (self.physics_multiplier * PUSH_MULTIPLIER * sqr_dist * strength)
+            simplified_pos = Vector(round(position.x) // self.simplification_value * self.simplification_value,
+                                    round(position.y) // self.simplification_value * self.simplification_value)
+            simp_offset = ceil(radius / self.simplification_value)
+            simp_offsets = tuple(Vector(x, y) * self.simplification_value for x in range(-simp_offset, simp_offset + 1)
+                                 for y in range(-simp_offset, simp_offset + 1))
+            for key in map(lambda x: x + simplified_pos, simp_offsets):
+                res = colliders.get(key, None)
+                if res is None:
+                    continue
+                for ent, other_position, other_vel, other_strength, other_hp, other_team in res:
+                    diff = other_position - position
+                    direction = diff.normalized()
+                    vel -= direction * (PUSH_MULTIPLIER * other_strength) \
+                           + Vector(0.5 - random(), 0.5 - random()) * 0.1
+                    other_vel += direction * (PUSH_MULTIPLIER * strength) \
+                                 + Vector(0.5 - random(), 0.5 - random()) * 0.1
 
                     if team != other_team:
                         if health_comp is not None:
@@ -304,14 +328,21 @@ class CollisionSystem(BaseSystem):
                                 health_comp.value += KILL_TREATMENT
                                 self.entity_manager.add_component(ent, DeadTag())
 
-            colliders.append((i.entity, radius, position, vel, strength, health_comp, team))
+            colliders[simplified_pos] = colliders.get(simplified_pos, [])
+            colliders[simplified_pos].append((i.entity, position, vel, strength, health_comp, team))
 
-        for pos, vel in map(lambda x: (x[2], x[3]), colliders):
-            pos += (vel + Vector(0.5 - random(), 0.5 - random()) * 0.1) * delta_time
-            vel *= 1 - DAMPENING
+        for arr in colliders.values():
+            for pos, vel in map(lambda x: (x[1], x[2]), arr):
+                pos += vel
+                vel *= 1 - DAMPENING
+                if vel.sqr_len() < 0.1:
+                    vel *= 0
 
 
 class EvolveSystem(BaseSystem):
+
+    def __init__(self):
+        self.filter = None
 
     def on_create(self) -> None:
         self.filter = self.entity_manager.create_filter(required=(Hunger,), additional=(MoveSpeed, Strength, Health))
@@ -338,6 +369,10 @@ class MouseHoverInfoSystem(BaseSystem):
 
     def __init__(self):
         self.__locked_entity = None
+        self.filter = None
+        self.__render_system = None
+        self.__render_surface = None
+        self.__font = None
 
     def on_create(self) -> None:
         from core.application import Application
@@ -386,47 +421,29 @@ class MouseHoverInfoSystem(BaseSystem):
 
 
 class DrawWorldBordersSystem(BaseSystem):
-
     __update_order__ = 150
 
     def __init__(self):
-        from simulation.utils import create_rect
+        from simulation.utils import create_circle
         from core.application import Application
-        wall_width = 5
-        color = (200, 20, 25)
-        self.__sprites = sprite.Group()
-        size = WORLD_SIZE + wall_width
-        wall = create_rect(int(2 * size), wall_width, color)
-        wall.rect.topleft = (-size, -size)
-        self.__sprites.add(wall)
-        wall = create_rect(int(2 * size) + wall_width, wall_width, color)
-        wall.rect.topleft = (-size, size)
-        self.__sprites.add(wall)
-        wall = create_rect(wall_width, int(2 * size), color)
-        wall.rect.topleft = (-size, -size)
-        self.__sprites.add(wall)
-        wall = create_rect(wall_width, int(2 * size) + wall_width, color)
-        wall.rect.topleft = (size, -size)
-        self.__sprites.add(wall)
+        self.__sprite = create_circle(round(WORLD_SIZE + 5), (0, 0, 0), (200, 10, 10), 10)
+        self.__sprite.image.set_colorkey((0, 0, 0))
+        self.__group = pygame.sprite.GroupSingle()
+        self.__group.add(self.__sprite)
 
         self.__render_surface = Application.get_render_surface()
         self.__render_system = World.current_world.get_or_create_system(RenderSystem)
 
     def on_update(self, delta_time: float) -> None:
-        for i in self.__sprites.sprites():
-            pos = i.rect.center
-            i.rect.center = (pos[0] + self.__render_system.camera_position.x,
-                             pos[1] + self.__render_system.camera_position.y)
-        self.__sprites.draw(self.__render_surface)
-        for i in self.__sprites.sprites():
-            pos = i.rect.center
-            i.rect.center = (pos[0] - self.__render_system.camera_position.x,
-                             pos[1] - self.__render_system.camera_position.y)
+        self.__sprite.rect.center = self.__render_system.camera_position.to_tuple()
+        self.__group.draw(self.__render_surface)
 
 
 class KillSystem(BaseSystem):
-
     __update_order__ = 200
+
+    def __init__(self):
+        self.filter = None
 
     def on_create(self) -> None:
         self.filter = self.entity_manager.create_filter(required=(DeadTag,))
@@ -443,3 +460,20 @@ class KillSystem(BaseSystem):
                 self.entity_manager.kill_entity(entity)
         except EntityNotFoundError:
             pass
+
+
+class BotCreationSystem(BaseSystem):
+
+    def __init__(self):
+        self.time = 0
+
+    def on_update(self, delta_time: float) -> None:
+        self.time += delta_time
+        if self.time >= BOT_CREATE_DELAY:
+            self.entity_manager.add_command(self.__create_command)
+            self.time = 0
+
+    def __create_command(self) -> None:
+        entity = self.entity_manager.create_entity()
+        create_named_creature(self.entity_manager, entity,
+                              "Bot" + str(entity.get_id()), randint(0, len(TEAM_COLORS) - 1))
