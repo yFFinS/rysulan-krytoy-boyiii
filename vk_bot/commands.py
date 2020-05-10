@@ -89,11 +89,6 @@ class CreateEntitiesCommand(BaseCommand):
     _args = (("число", int),)
     _description = "создает {число} существ"
 
-    def __init__(self):
-        from pygame import font
-        self.__font = font.Font(None, 25)
-        self.__name_color = (240, 240, 240)
-
     def on_call(self, data: dict, args: dict, methods: BotMethods) -> None:
         from simulation.components import Rigidbody
         from simulation.settings import MAX_CREATURES
@@ -109,8 +104,8 @@ class CreateEntitiesCommand(BaseCommand):
                 from simulation.utils import create_named_creature
 
                 entity = entity_manager.create_entity()
-                create_named_creature(entity_manager, entity, "Bot" + str(entity.get_id()), self.__font,
-                                      self.__name_color, randint(0, len(TEAM_COLORS) - 1))
+                create_named_creature(entity_manager, entity, "Bot" + str(entity.get_id()),
+                                      randint(0, len(TEAM_COLORS) - 1))
             methods.send_message(data["peer_id"], f"Создано {c} существ.")
 
         entity_manager.add_command(buffered_command)
@@ -122,11 +117,6 @@ class CreateUserEntityCommand(BaseCommand):
     _args = (("имя", str),)
     _description = "создает существо с именем {имя}"
 
-    def __init__(self):
-        from pygame import font
-        self.__font = font.Font(None, 25)
-        self.__name_color = (240, 240, 240)
-
     def on_call(self, data: dict, args: dict, methods: BotMethods) -> None:
         name = args["имя"]
         entity_manager = World.current_world.get_manager()
@@ -136,8 +126,7 @@ class CreateUserEntityCommand(BaseCommand):
             from simulation.components import UserId
 
             entity = entity_manager.create_entity()
-            create_named_creature(entity_manager, entity, name, self.__font,
-                                  self.__name_color, randint(0, len(TEAM_COLORS)))
+            create_named_creature(entity_manager, entity, name, randint(0, len(TEAM_COLORS)))
             id_comp = UserId()
             id_comp.value = data["peer_id"]
             entity_manager.add_component(entity, id_comp)
