@@ -55,6 +55,7 @@ class World:
         system.entity_manager = self.__entity_manager
         self.__systems.append(system)
         system.on_create()
+        self.__systems.sort()
         return system
 
     @profiled
@@ -89,7 +90,7 @@ class World:
             try:
                 self.create_system(system_type)
                 count += 1
-                self.__systems.sort()
             except SystemExistsError:
                 pass
         print(f"Created {count} systems.")
+        print("\n".join(f"{num + 1}. {i.__class__.__name__}" for num, i in enumerate(self.__systems)))
