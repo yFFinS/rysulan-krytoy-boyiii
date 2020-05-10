@@ -80,6 +80,7 @@ def create_creature(entity_manager: EntityManager, entity: Entity, team: int = -
     entity_manager.add_component(entity, str_comp)
     entity_manager.add_component(entity, hp_comp)
     entity_manager.add_component(entity, priority_comp)
+    entity_manager.add_component(entity, team_comp)
 
 
 def create_food(entity_manager: EntityManager, entity: Entity) -> None:
@@ -94,22 +95,8 @@ def create_food(entity_manager: EntityManager, entity: Entity) -> None:
 
 
 def create_named_creature(entity_manager: EntityManager, entity: Entity, name: str, team: int = -1) -> None:
-    name_entity = entity_manager.create_entity()
-    follow_entity = entity
-    create_creature(entity_manager, follow_entity, team)
+    create_creature(entity_manager, entity, team)
     name_comp = EntityName()
     name_comp.value = name
-    name_comp.entity = follow_entity
 
-    render_comp = RenderSprite()
-    text_sprite = sprite.Sprite()
-    text = NAME_FONT.render(name, True, NAME_COLOR)
-    text_sprite.image = text
-    text_sprite.rect = text.get_rect()
-    render_comp.sprite = text_sprite
-    position_comp = Position()
-    position_comp.value = Vector(0, 0)
-
-    entity_manager.add_component(name_entity, name_comp)
-    entity_manager.add_component(name_entity, render_comp)
-    entity_manager.add_component(name_entity, position_comp)
+    entity_manager.add_component(entity, name_comp)
