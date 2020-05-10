@@ -159,14 +159,37 @@ class HungerSystem(BaseSystem):
                 hunger_comp.value -= 1
                 if speed_comp is not None:
                     hunger_comp.value -= speed_comp.value * SPEED_HUNGER_MULTIPLIER
-                if hunger_comp.value <= EXTREME_HUNGER_VALUE:
-                    priority_comp = i.get_component(Priority)
-                    if priority_comp:
-                        priority_comp.value = 'gathering'
                 if hunger_comp.value <= 0:
                     self.entity_manager.add_component(i.entity, DeadTag())
 
             self.hunger_time = 0
+
+
+class ExtremePrioritySystem(BaseSystem):
+
+    def __init__(self):
+        self.extreme_priority_time = 0
+        self.filter = None
+
+    def on_create(self) -> None:
+        self.filter = self.entity_manager.create_filter(required=(Hunger, Health), additional=(Priority,),
+                                                        without=(DeadTag,))
+
+    def on_update(self, delta_time: float) -> None:
+        self.extreme_priority_time += delta_time
+        if self.extreme_priority_time >= 1:
+            for i in self.query(self.filter):
+                hp_comp = i.get_component(Health)
+                hunger_comp = i.get_component(Hunger)
+                if hunger_comp.value <= EXTREME_HUNGER_VALUE:
+                    priority_comp = i.get_component(Priority)
+                    if priority_comp:
+                        priority_comp.value = 'gathering'
+                if hp_comp.value <= EXTREME_HEALTH_VALUE:
+                    priority_comp = i.get_component(Priority)
+                    if priority_comp:
+                        priority_comp.value = 'safety'
+            self.extreme_priority_time = 0
 
 
 class GatheringSystem(BaseSystem):
@@ -254,6 +277,45 @@ class HuntingSystem(BaseSystem):
                         closest_pos = pos
                 target_comp.value = closest_pos
             self.hunting_time = 0
+
+
+class SafetySystem(BaseSystem):
+
+    def __init__(self):
+        self.filter = None
+        self.safety_time = 1
+
+    def on_create(self) -> None:
+        self.filter = self.entity_manager.create_filter(required=(Position, TargetPosition),
+                                                        additional=(Priority,),
+                                                        without=(DeadTag,))
+
+    def on_update(self, delta_time: float) -> None:
+        self.safety_time += delta_time
+        if self.safety_time >= 1:
+            creatures = tuple(self.query(self.filter))
+            for i in creatures:
+                priority_comp = i.get_component(Priority)
+                if priority_comp is not None and priority_comp.value != 'safety':
+                    continue
+
+                pos_comp = i.get_component(Position)
+                target_comp = i.get_component(TargetPosition)
+
+                closest_pos = creatures[0].get_component(Position).value
+
+                for j in creatures:
+                    if j == i:
+                        continue
+                    pos = j.get_component(Position).value
+
+                    if (pos_comp.value - pos).sqr_len() < (pos_comp.value - closest_pos).sqr_len():
+                        closest_pos = pos
+                target_comp.value = pos_comp.value * 2 - closest_pos
+                if (pos_comp.value - closest_pos).sqr_len() > SAFETY_DISTANCE * SAFETY_DISTANCE:
+                    target_comp.value = None
+
+            self.safety_time = 0
 
 
 class PositionLimitSystem(BaseSystem):
