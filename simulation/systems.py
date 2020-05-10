@@ -216,7 +216,7 @@ class GatheringSystem(BaseSystem):
                             creature_pos_comp.value - closest_bush[1]).sqr_len():
                         closest_bush = j
                 creature_target_comp.value = closest_bush[1]
-                if (creature_target_comp.value - creature_pos_comp.value).sqr_len() <= EAT_DISTANCE:
+                if (creature_target_comp.value - creature_pos_comp.value).sqr_len() <= EAT_DISTANCE * EAT_DISTANCE:
                     hunger_comp = i.get_component(Hunger)
                     hunger_comp.value += BUSH_FOOD_VALUE
                     if hp_comp is not None:
