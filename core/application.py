@@ -10,8 +10,8 @@ BACKGROUND_COLOR = (102, 102, 51)
 
 
 class Application:
-    __slots__ = ("__screen", "__is_running", "__clock")
-    __instance = None
+    __slots__ = ("__screen", "__is_running", "__clock", "__pr_commands")
+    __instance: "Application" = None
 
     def __init__(self):
 
@@ -24,6 +24,7 @@ class Application:
         self.__is_running = False
         self.__screen: pygame.Surface = pygame.display.set_mode((WIDTH, HEIGHT), pygame.DOUBLEBUF)
         self.__clock = pygame.time.Clock()
+        self.__pr_commands = []
 
         World.default_world = World()
 
@@ -49,8 +50,16 @@ class Application:
                 Mouse.handle_event(None)
             World.update_current()
 
-            pygame.display.flip()
             Time.tick()
+
+            pygame.display.flip()
+
+            for com in self.__pr_commands:
+                try:
+                    com()
+                except:
+                    continue
+            self.__pr_commands.clear()
 
             pygame.display.set_caption(str(int(Time.get_fps())))
 
@@ -64,3 +73,8 @@ class Application:
     @staticmethod
     def get_render_surface():
         return Application.__instance.__screen
+
+    @staticmethod
+    def add_post_render_command(command) -> None:
+        Application.__instance.__pr_commands.append(command)
+
