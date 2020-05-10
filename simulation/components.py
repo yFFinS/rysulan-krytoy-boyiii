@@ -70,22 +70,17 @@ class TargetPosition(BaseComponent):
  
 
 class EntityName(BaseComponent):
-    __slots__ = ("value", "entity")
+    __slots__ = ("value",)
     sql_name = sa.Column(sa.String, name="name")
-    sql_linked_entity_id = sa.Column(sa.Integer, name="linked_entity_id")
 
     def __init__(self):
         self.value = None
-        self.entity = None
-        self.user_id = None
 
     def from_database(self, entity_manager: EntityManager) -> None:
         self.value = self.sql_name
-        self.entity = entity_manager.get_entity(self.sql_linked_entity_id)
 
     def to_database(self) -> None:
         self.sql_name = self.value
-        self.sql_linked_entity_id = self.entity.get_id()
 
 
 class UserId(BaseComponent):
