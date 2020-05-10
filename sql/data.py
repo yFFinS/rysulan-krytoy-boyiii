@@ -3,8 +3,6 @@ import simulation.__all_components
 from ecs.component import BaseComponent
 from .core import Factory
 from .core import SqlAlchemyBase
-from .core import sa
-from typing import Dict
 
 
 class EntryDeletionStack:
