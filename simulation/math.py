@@ -1,4 +1,5 @@
 from typing import Tuple
+from math import sqrt
 
 
 class Vector:
@@ -67,8 +68,8 @@ class Vector:
         return Vector(-self.x, -self.y)
 
     def normalized(self) -> "Vector":
-        max_value = max(abs(self.x), abs(self.y)) if self.x != self.y != 0 else 1
-        return Vector(self.x / max_value, self.y / max_value)
+        self_len = self.len()
+        return Vector(self.x / self_len, self.y / self_len) if self_len else Vector(0, 0)
 
     def __eq__(self, other):
         return abs(self.x - other.x) < 0.0001 and abs(self.y - other.y) < 0.0001
@@ -78,3 +79,9 @@ class Vector:
 
     def sqr_len(self) -> float:
         return self.x * self.x + self.y * self.y
+
+    def len(self) -> float:
+        return sqrt(self.sqr_len())
+
+    def __hash__(self):
+        return hash(self.to_tuple())
