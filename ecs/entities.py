@@ -29,11 +29,6 @@ class EntityExistsError(Exception):
     pass
 
 
-class ComponentNotFoundError(Exception):
-    """Raised when component does not exists within entity"""
-    pass
-
-
 TComponent = TypeVar("TComponent", bound=BaseComponent)
 
 
@@ -161,7 +156,6 @@ class EntityContainer:
             for comp in self.__data[entity]:
                 if type(comp) == component_type:
                     return comp
-            raise ComponentNotFoundError()
 
     @profiled
     def get_entity(self, entity_id: int) -> Entity:
@@ -185,17 +179,20 @@ class BufferedCommand:
 
 class CommandBuffer:
     __slots__ = ("__commands",)
-    __commands: Set[BufferedCommand]
+    __commands: List[BufferedCommand]
 
     def __init__(self):
-        self.__commands = set()
+        self.__commands = []
 
     def add_command(self, command: Callable, *args, **kwargs) -> None:
-        self.__commands.add(BufferedCommand(command, *args, **kwargs))
+        self.__commands.append(BufferedCommand(command, *args, **kwargs))
 
     def execute_commands(self) -> None:
         for command in self.__commands:
-            command.execute()
+            try:
+                command.execute()
+            except:
+                print(f"Error in {command.command.__name__}.")
         self.__commands.clear()
 
 
