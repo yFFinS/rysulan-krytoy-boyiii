@@ -41,8 +41,9 @@ class Profiler:
         result = function(*args, **kwargs)
         if is_started:
             func_name = function.__qualname__
-            current_data = Profiler.__session_data.get(func_name, (0, 0))
-            Profiler.__session_data[func_name] = (current_data[0] + 1, current_data[1] + time() - start_time)
+            data = Profiler.__session_data.get(func_name, (0, 0))
+            elapsed_time = time() - start_time
+            Profiler.__session_data[func_name] = (data[0] + 1, data[1] + elapsed_time)
         return result
 
     @staticmethod

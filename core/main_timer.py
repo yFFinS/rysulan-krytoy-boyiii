@@ -10,6 +10,7 @@ class Time:
     __clock = Clock()
     __last_tick_time = 0
     __delta_time = 0
+    time_scale = 1
 
     @staticmethod
     def tick() -> None:
@@ -20,7 +21,7 @@ class Time:
 
     @staticmethod
     def get_delta_time() -> float:
-        return Time.__delta_time
+        return Time.__delta_time * Time.time_scale
 
     @staticmethod
     def get_fps() -> float:
