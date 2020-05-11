@@ -65,6 +65,22 @@ class BotMethods:
             if user_id not in exclude:
                 inst.send_message(user_id, message)
 
+    @staticmethod
+    def get_user(user_id: str) -> str:
+        result = BotMethods.__instance.__api.users.get(user_ids=(user_id,))
+        text = ""
+        try:
+            if "first_name" in result[0]:
+                text += result[0]["first_name"]
+            if "last_name" in result[0]:
+                if text:
+                    text += " "
+                text += result[0]["last_name"]
+        except:
+            pass
+        return text
+
+
 
 class BaseCommand(ABC):
     __slots__ = ()
@@ -389,3 +405,39 @@ class KillAllCommand(BaseCommand):
             methods.broadcast_message("Симуляция сброшена администратором.")
             save_to_database()
         entity_manager.add_command(command)
+
+
+class Top10Command(BaseCommand):
+    _name = "top10"
+    _event_data = ("peer_id",)
+    _description = "выводит 10 существ с наибольшей продолжительностью жизни"
+
+    def on_call(self, data: dict, args: dict, methods: BotMethods) -> None:
+        from src.simulation.components import LifeTime, EntityName, UserId
+        entity_manager = World.current_world.get_manager()
+        data_filter = entity_manager.create_filter(required=(LifeTime, EntityName), additional=(UserId,))
+        top10 = []
+        for i in entity_manager.get_entities().filter(data_filter):
+            time = i.get_component(LifeTime).value
+            name = i.get_component(EntityName).value
+            id_comp = i.get_component(UserId)
+            user_id = id_comp.value if id_comp is not None else None
+            ent_data = time, name, user_id
+            if len(top10) < 10:
+                top10.append(ent_data)
+            else:
+                min_time = min(top10, key=lambda x: x[0])
+                to_rem = None
+                for t in range(len(top10)):
+                    if top10[t][0] == min_time:
+                        top10[t] = ent_data
+                        break
+        top10.sort(key=lambda x: x[0], reverse=True)
+        message = []
+        for num, i in enumerate(top10):
+            user_id = i[-1]
+            text = f"{num + 1}. {i[1]} — {int(i[0]) // 60} минут."
+            if user_id is not None:
+                text += f" Владелец {methods.get_user(user_id)}."
+            message.append(text)
+        methods.send_message(data["peer_id"], "\n".join(message))
