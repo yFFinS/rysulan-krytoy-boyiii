@@ -1,7 +1,7 @@
-from ecs.component import BaseComponent
+from src.ecs.component import BaseComponent
 import sqlalchemy as sa
-from ecs.entities import EntityManager
-from simulation.math import Vector
+from src.ecs.entities import EntityManager
+from src.simulation.math import Vector
 from pygame import image, sprite
 
 
@@ -164,6 +164,10 @@ class Rigidbody(BaseComponent):
     sql_velocity_x = sa.Column(sa.Float, name="velocity_x")
     sql_velocity_y = sa.Column(sa.Float, name="velocity_y")
 
+    def __init__(self):
+        self.radius = 0
+        self.velocity = Vector(0, 0)
+
     def from_database(self, entity_manager) -> None:
         self.radius = self.sql_radius
         self.velocity = Vector(self.sql_velocity_x, self.sql_velocity_y)
@@ -178,6 +182,9 @@ class Health(BaseComponent):
     __slots__ = ("value",)
     sql_health = sa.Column(sa.Float, name="health")
 
+    def __init__(self):
+        self.value = 0
+
     def from_database(self, entity_manager) -> None:
         self.value = self.sql_health
 
@@ -189,6 +196,9 @@ class Team(BaseComponent):
     __slots__ = ("value",)
     sql_team = sa.Column(sa.Integer, name="team")
 
+    def __init__(self):
+        self.value = 0
+
     def from_database(self, entity_manager) -> None:
         self.value = self.sql_team
 
@@ -197,7 +207,17 @@ class Team(BaseComponent):
 
 
 class DeadTag(BaseComponent):
-    pass
+    __slots__ = ("reason",)
+    sql_reason = sa.Column(sa.String, name="reason", nullable=True)
+
+    def __init__(self, reason: str = None):
+        self.reason = reason
+
+    def to_database(self) -> None:
+        self.sql_reason = self.reason
+
+    def from_database(self, entity_manager) -> None:
+        self.reason = self.sql_reason
 
 
 class LifeTime(BaseComponent):
