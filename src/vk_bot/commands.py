@@ -370,3 +370,22 @@ class SetPriorityCommand(BaseCommand):
                 methods.send_message(user_id, "Существо не найдено.")
         except:
             methods.send_message(user_id, "Что-то пошло не так.")
+
+
+class KillAllCommand(BaseCommand):
+    _name = "killall"
+    _owner_only = True
+    _description = "уничтожает все объекты, сбрасывает симуляцию"
+
+    def on_call(self, data: dict, args: dict, methods: BotMethods) -> None:
+        from src.simulation.components import DeadTag
+        from src.sql.data import save_to_database
+        entity_manager = World.current_world.get_manager()
+        data_filter = entity_manager.create_filter(required=(), without=(DeadTag,))
+
+        def command():
+            for i in entity_manager.get_entities().filter(data_filter):
+                entity_manager.add_component(i.entity, DeadTag("божественных сил"))
+            methods.broadcast_message("Симуляция сброшена администратором.")
+            save_to_database()
+        entity_manager.add_command(command)
