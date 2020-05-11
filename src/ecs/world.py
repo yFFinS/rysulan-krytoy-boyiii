@@ -1,8 +1,8 @@
-from ecs.entities import EntityManager
-from ecs.systems import BaseSystem
+from src.ecs.entities import EntityManager
+from src.ecs.systems import BaseSystem
 from typing import List, Type, TypeVar
-from core.profiling import profiled
-from core.main_timer import Time
+from src.core.profiling import profiled
+from src.core.main_timer import Time
 
 
 class SystemNotExistsError(Exception):
@@ -84,8 +84,8 @@ class World:
         World.current_world.update()
 
     def create_all_systems(self) -> None:
-        import simulation.__all_systems
         count = 0
+        import src.simulation.__all_systems
         for system_type in BaseSystem.__subclasses__():
             try:
                 self.create_system(system_type)

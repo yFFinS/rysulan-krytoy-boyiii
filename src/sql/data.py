@@ -1,6 +1,6 @@
-from ecs.world import World
-import simulation.__all_components
-from ecs.component import BaseComponent
+from src.ecs.world import World
+from src.ecs.component import BaseComponent
+import src.simulation.__all_components
 from .core import Factory
 from .core import SqlAlchemyBase
 

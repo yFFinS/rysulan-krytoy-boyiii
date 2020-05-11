@@ -4,7 +4,7 @@ from typing import Tuple
 import requests
 import json
 
-from ecs.world import World
+from src.ecs.world import World
 
 
 class BotMethods:
@@ -42,8 +42,7 @@ class BotMethods:
             upload_result = api.photos.saveMessagesPhoto(server=result["server"],
                                                          photo=result["photo"],
                                                          hash=result["hash"])
-
-            api.messages.send(user_id=peer_id,
+            api.messages.send(peer_id=str(peer_id),
                               attachment=f'photo{upload_result[0]["owner_id"]}_{upload_result[0]["id"]}',
                               random_id=BotMethods.random_id())
         except BaseException as e:
@@ -135,9 +134,9 @@ class CreateEntitiesCommand(BaseCommand):
     _owner_only = True
 
     def on_call(self, data: dict, args: dict, methods: BotMethods) -> None:
-        from simulation.components import Rigidbody
-        from simulation.settings import MAX_CREATURES
-        from simulation.utils import TEAM_COLORS
+        from src.simulation.components import Rigidbody
+        from src.simulation.settings import MAX_CREATURES
+        from src.simulation.utils import TEAM_COLORS
 
         count = args["число"]
         entity_manager = World.current_world.get_manager()
@@ -146,7 +145,7 @@ class CreateEntitiesCommand(BaseCommand):
         def buffered_command():
             c = max(0, min(count, MAX_CREATURES - len(entity_manager.get_entities().filter(data_filter))))
             for i in range(c):
-                from simulation.utils import create_named_creature
+                from src.simulation.utils import create_named_creature
 
                 entity = entity_manager.create_entity()
                 create_named_creature(entity_manager, entity, "Bot" + str(entity.get_id()),
@@ -167,8 +166,8 @@ class CreateUserEntityCommand(BaseCommand):
         entity_manager = World.current_world.get_manager()
 
         def buffered_command():
-            from simulation.utils import create_named_creature, TEAM_COLORS
-            from simulation.components import UserId
+            from src.simulation.utils import create_named_creature, TEAM_COLORS
+            from src.simulation.components import UserId
 
             entity = entity_manager.create_entity()
             create_named_creature(entity_manager, entity, name, randint(0, len(TEAM_COLORS)))
@@ -191,7 +190,7 @@ class ListCommand(BaseCommand):
         entity_manager = World.current_world.get_manager()
         message = []
         try:
-            from simulation.components import UserId, EntityName
+            from src.simulation.components import UserId, EntityName
 
             data_filter = entity_manager.create_filter(required=(EntityName, UserId))
             for i in entity_manager.get_entities().filter(data_filter):
@@ -220,10 +219,10 @@ class StatsCommand(BaseCommand):
 
         num = args["номер существа"]
         try:
-            from simulation.components import UserId, MoveSpeed, Strength, Health, Hunger
-            from simulation.systems import RenderSystem
-            from simulation.math import Vector
-            from ecs.entities import EntityNotFoundError
+            from src.simulation.components import UserId, MoveSpeed, Strength, Health, Hunger, Priority
+            from src.simulation.systems import RenderSystem
+            from src.simulation.math import Vector
+            from src.ecs.entities import EntityNotFoundError
 
             try:
                 entity = entity_manager.get_entity(num)
@@ -233,18 +232,22 @@ class StatsCommand(BaseCommand):
                     raise EntityNotFoundError()
 
                 stat_comp = entity_manager.get_component(entity, Health)
-
                 if stat_comp is not None:
-                    message.append(f"Здоровье: {stat_comp.value}")
+                    message.append(f"Здоровье: {'%.2f' % stat_comp.value}")
                 stat_comp = entity_manager.get_component(entity, Strength)
                 if stat_comp is not None:
-                    message.append(f"Сила: {stat_comp.value}")
+                    message.append(f"Сила: {'%.2f' % stat_comp.value}")
                 stat_comp = entity_manager.get_component(entity, MoveSpeed)
                 if stat_comp is not None:
-                    message.append(f"Скорость: {stat_comp.value}")
+                    message.append(f"Скорость: {'%.2f' % stat_comp.value}")
                 stat_comp = entity_manager.get_component(entity, Hunger)
                 if stat_comp is not None:
-                    message.append(f"Сытость: {stat_comp.value}")
+                    message.append(f"Сытость: {'%.2f' % stat_comp.value}")
+                stat_comp = entity_manager.get_component(entity, Priority)
+                if stat_comp is not None:
+                    v = stat_comp.current
+                    message.append(f"Действие:"
+                                   f" {'ест' if v == 'gathering' else 'охотится' if v == 'hunting' else 'убегает'}.")
 
                 methods.send_message(user_id, "\n".join(message))
             except:
@@ -264,11 +267,11 @@ class PhotoCommand(BaseCommand):
         user_id = data["peer_id"]
         entity_manager = World.current_world.get_manager()
         try:
-            from simulation.components import UserId, Position
-            from simulation.systems import RenderSystem
-            from simulation.math import Vector
-            from ecs.entities import EntityNotFoundError
-            from core.application import Application, WIDTH, HEIGHT
+            from src.simulation.components import UserId, Position
+            from src.simulation.systems import RenderSystem
+            from src.simulation.math import Vector
+            from src.ecs.entities import EntityNotFoundError
+            from src.core.application import Application, WIDTH, HEIGHT
             from pygame.image import save
 
             try:
@@ -297,7 +300,7 @@ class PauseCommand(BaseCommand):
     _owner_only = True
 
     def on_call(self, data: dict, args: dict, methods: BotMethods) -> None:
-        from core.application import Application
+        from src.core.application import Application
         if Application.set_paused(True):
             methods.broadcast_message("Симуляция приостановлена.")
 
@@ -308,7 +311,7 @@ class UnpauseCommand(BaseCommand):
     _owner_only = True
 
     def on_call(self, data: dict, args: dict, methods: BotMethods) -> None:
-        from core.application import Application
+        from src.core.application import Application
         if Application.set_paused(False):
             methods.broadcast_message("Симуляция возобновлена.")
 
@@ -342,9 +345,9 @@ class SetPriorityCommand(BaseCommand):
 
         num = args["номер существа"]
         try:
-            from simulation.components import UserId, Priority
-            from simulation.math import Vector
-            from ecs.entities import EntityNotFoundError
+            from src.simulation.components import UserId, Priority
+            from src.simulation.math import Vector
+            from src.ecs.entities import EntityNotFoundError
 
             try:
                 entity = entity_manager.get_entity(num)

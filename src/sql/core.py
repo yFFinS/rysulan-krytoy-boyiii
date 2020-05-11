@@ -17,7 +17,6 @@ class Factory:
             return
         engine = sa.create_engine(connection_string, echo=False)
         Factory.__factory = orm.sessionmaker(bind=engine)
-        import sql.data
         SqlAlchemyBase.metadata.create_all(engine)
 
     @staticmethod
@@ -37,4 +36,4 @@ def init(db_file: str) -> None:
 
 
 if __name__ == "__main__":
-    init("entities.sqlite")
+    init("../../entities.sqlite")

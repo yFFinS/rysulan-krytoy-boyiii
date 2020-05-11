@@ -1,6 +1,6 @@
 from typing import Dict, List, Type, TypeVar, Callable, Set, Generic
-from ecs.component import BaseComponent
-from core.profiling import profiled
+from src.ecs.component import BaseComponent
+from src.core.profiling import profiled
 
 
 class Entity:
@@ -100,7 +100,6 @@ class EntityContainer:
 
     def __init__(self):
         self.__data: Dict[Entity, Set[BaseComponent]] = dict()
-        import simulation.__all_components
         self.__cache: Dict[Type[TComponent], Set[Entity]]\
             = {comp_type: set() for comp_type in BaseComponent.__subclasses__()}
 
@@ -148,7 +147,7 @@ class EntityContainer:
             if to_remove is not None:
                 self.__data[entity].discard(to_remove)
                 self.__cache[type(to_remove)].discard(entity)
-                from sql.data import EntryDeletionStack
+                from src.sql.data import EntryDeletionStack
                 EntryDeletionStack.add(to_remove)
                 to_remove.on_remove()
 

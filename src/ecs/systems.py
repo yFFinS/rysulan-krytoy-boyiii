@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
-from ecs.entities import EntityManager
-from ecs.entities import ComponentDataFilter
-from ecs.entities import ComponentDataArray
+from src.ecs.entities import EntityManager
+from src.ecs.entities import ComponentDataFilter
+from src.ecs.entities import ComponentDataArray
 from typing import Set
 
 

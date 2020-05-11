@@ -1,7 +1,7 @@
 from random import randint, random
 from pygame import Surface, draw, Color, font
 from .settings import *
-from ecs.entities import Entity
+from src.ecs.entities import Entity
 from .components import *
 from math import sin, cos, sqrt, pi
 

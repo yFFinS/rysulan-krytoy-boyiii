@@ -1,15 +1,15 @@
 from vk_api import VkApi
 from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType, VkBotEvent
-from vk_bot.commands import *
+from src.vk_bot.commands import *
 from typing import Dict, TypeVar
 from os.path import exists
 
 
-PROPERTIES_FILE_PATH = "vk_bot/bot.properties"
+PROPERTIES_FILE_PATH = "bot.properties"
 
 
 class Client:
-    from vk_bot.commands import BaseCommand
+    from src.vk_bot.commands import BaseCommand
     __slots__ = ("__session", "__methods", "__long_poll", "__group_id", "__commands", "__owners")
     __session: VkApi
     __long_poll: VkBotLongPoll

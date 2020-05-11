@@ -1,7 +1,7 @@
 from pygame.locals import MOUSEBUTTONUP, MOUSEBUTTONDOWN, BUTTON_LEFT, BUTTON_RIGHT
 from pygame import mouse
 from enum import Enum
-from simulation.math import Vector
+from src.simulation.math import Vector
 
 
 class MouseState(Enum):

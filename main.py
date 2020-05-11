@@ -1,7 +1,7 @@
-from core.application import Application
-import sql.data as db_session
-import vk_bot.client
-import sql.core
+from src.core.application import Application
+import src.sql.data as db_session
+import src.vk_bot.client
+import src.sql.core
 
 # Set to False if you don't want vk bot to broadcast messages
 BROADCAST_MESSAGES = False
@@ -9,9 +9,9 @@ BROADCAST_MESSAGES = False
 if __name__ == "__main__":
     app = Application()
 
-    vk_bot.client.init()
+    src.vk_bot.client.init()
 
-    sql.core.init("sql/entities.sqlite")
+    src.sql.core.init("entities.sqlite")
     db_session.create_entities_from_database()
 
     app.run(True, True)

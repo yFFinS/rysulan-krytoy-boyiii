@@ -1,4 +1,4 @@
-from sql.core import SqlAlchemyBase, sa
+from src.sql.core import SqlAlchemyBase, sa
 from sqlalchemy.ext.declarative import declared_attr
 
 

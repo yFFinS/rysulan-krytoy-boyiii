@@ -1,8 +1,8 @@
 import pygame
-from core.profiling import Profiler
-from ecs.world import World
-from core.main_timer import Time
-from core.input import Mouse
+from src.core.profiling import Profiler
+from src.ecs.world import World
+from src.core.main_timer import Time
+from src.core.input import Mouse
 
 
 WIDTH, HEIGHT = 800, 600
@@ -30,7 +30,7 @@ class Application:
         World.default_world = World()
 
     def run(self, profile=False, clear_log=False) -> None:
-        from vk_bot.commands import BotMethods
+        from src.vk_bot.commands import BotMethods
         BotMethods.broadcast_message("Мы онлайн.")
 
         Profiler.begin_profile_session()
@@ -87,7 +87,7 @@ class Application:
 
     @staticmethod
     def terminate() -> None:
-        from vk_bot.commands import BotMethods
+        from src.vk_bot.commands import BotMethods
         from time import sleep
         import os
         BotMethods.broadcast_message("Мы оффлайн.")
