@@ -558,8 +558,10 @@ class KillSystem(BaseSystem):
                 if not res:
                     message += ". Жаль!!"
                 else:
-                    message += " от " + res + ". хд"
-                self.__methods.send_message(id_comp.value, message)
+                    message += " от " + res + ". Ну че поделать."
+                self.__methods.send_message(id_comp.peer_id, message)
+                if id_comp.peer_id != id_comp.value:
+                    self.__methods.send_message(id_comp.value, message)
             try:
                 self.entity_manager.kill_entity(i.entity)
             except EntityNotFoundError:

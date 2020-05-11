@@ -193,6 +193,7 @@ class CreateUserEntityCommand(BaseCommand):
             create_named_creature(entity_manager, entity, name, randint(0, len(TEAM_COLORS)))
             id_comp = UserId()
             id_comp.value = str(data["from_id"])
+            id_comp.peer_id = str(data["peer_id"])
             entity_manager.add_component(entity, id_comp)
 
             methods.send_message(data["peer_id"], f"Существо создано. Его номер — {entity.get_id()}.")

@@ -84,14 +84,21 @@ class EntityName(BaseComponent):
 
 
 class UserId(BaseComponent):
-    __slots__ = ("value",)
+    __slots__ = ("value", "peer_id")
     sql_user_id = sa.Column(sa.String, name="user_id")
+    sql_peer_id = sa.Column(sa.String, name="peer_id")
+
+    def __init__(self):
+        self.value = None
+        self.peer_id = None
 
     def from_database(self, entity_manager) -> None:
         self.value = self.sql_user_id
+        self.peer_id = self.sql_peer_id
 
     def to_database(self) -> None:
         self.sql_user_id = self.value
+        self.sql_peer_id = self.peer_id
 
 
 class MoveSpeed(BaseComponent):
