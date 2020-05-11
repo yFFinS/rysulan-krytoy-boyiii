@@ -3,6 +3,7 @@ from src.ecs.component import BaseComponent
 import src.simulation.__all_components
 from .core import Factory
 from .core import SqlAlchemyBase
+from datetime import datetime
 
 
 class EntryDeletionStack:
@@ -54,6 +55,8 @@ def save_to_database() -> None:
                 session.add(component)
             except BaseException as e:
                 print(f"{component} can't be added to database. Reason: {e}")
+
+    print("Saved", datetime.now())
 
 
 def close() -> None:
