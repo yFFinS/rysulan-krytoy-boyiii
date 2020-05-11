@@ -18,6 +18,15 @@ class Entity:
     def get_id(self) -> int:
         return self.__id
 
+    def __eq__(self, other):
+        return self.__id == other.__id
+
+    def __ne__(self, other):
+        return not self == other
+
+    def __hash__(self):
+        return hash(self.__id)
+
 
 class EntityNotFoundError(Exception):
     """Raised when entity does not exists in current manager"""

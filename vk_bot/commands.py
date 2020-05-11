@@ -9,13 +9,15 @@ from ecs.world import World
 
 class BotMethods:
     from vk_api import VkApi
-    __slots__ = ("__api",)
+    __slots__ = ("__api", "__group_id")
     __instance: "BotMethods" = None
+    __group_id: str
 
-    def __init__(self, session: VkApi):
+    def __init__(self, session: VkApi, group_id: str):
         if BotMethods.__instance is None:
             BotMethods.__instance = self
             self.__api = session.get_api()
+            self.__group_id = group_id
 
     @staticmethod
     def send_message(peer_id: str, message: str) -> None:
@@ -47,13 +49,31 @@ class BotMethods:
         except BaseException as e:
             print(e)
 
+    @staticmethod
+    def set_online(value: bool) -> None:
+        # blocked by vk api XD.
+        return
+
+    @staticmethod
+    def broadcast_message(message: str, exclude: tuple = ()) -> None:
+        from main import BROADCAST_MESSAGES
+        if not BROADCAST_MESSAGES:
+            return
+        inst = BotMethods.__instance
+        user_ids = inst.__api.groups.getMembers(group_id=inst.__group_id)
+        for user in user_ids["items"]:
+            user_id = str(user)
+            if user_id not in exclude:
+                inst.send_message(user_id, message)
+
 
 class BaseCommand(ABC):
     __slots__ = ()
     _name: str = None
     _description: str = None
-    _event_data: tuple = None
+    _event_data: tuple = ()
     _args: Tuple[Tuple[str, type]] = None
+    _owner_only: bool = False
 
     @abstractmethod
     def on_call(self, data: dict, args: dict, methods: BotMethods) -> None:
@@ -85,6 +105,8 @@ class BaseCommand(ABC):
             text_data = text.strip().split(maxsplit=len(cls._args))[1:]
             if len(cls._args) < len(text_data):
                 raise IndexError("Слишком много аргументов.")
+            elif len(cls._args) > len(text_data):
+                raise IndexError("Недостаточно аргументов.")
             for num, inp in enumerate(text_data):
                 arg = cls._args[num]
                 try:
@@ -100,14 +122,9 @@ class BaseCommand(ABC):
         args = " ".join("{" + i[0] + "}" for i in cls._args) + " " if cls._args is not None else ""
         return f"{cls._name} {args} — {cls._description}."
 
-
-class HelloCommand(BaseCommand):
-    _name = "hello"
-    _description = "пишет \"привет\""
-    _event_data = ("peer_id",)
-
-    def on_call(self, data: dict, args: dict, methods: BotMethods) -> None:
-        methods.send_message(data["peer_id"], "привет")
+    @classmethod
+    def is_owner_only(cls) -> bool:
+        return cls._owner_only
 
 
 class CreateEntitiesCommand(BaseCommand):
@@ -115,6 +132,7 @@ class CreateEntitiesCommand(BaseCommand):
     _event_data = ("peer_id",)
     _args = (("число", int),)
     _description = "создает {число} существ"
+    _owner_only = True
 
     def on_call(self, data: dict, args: dict, methods: BotMethods) -> None:
         from simulation.components import Rigidbody
@@ -271,3 +289,42 @@ class PhotoCommand(BaseCommand):
                 methods.send_message(user_id, "Существо не найдено.")
         except:
             methods.send_message(user_id, "Что-то пошло не так.")
+
+
+class PauseCommand(BaseCommand):
+    _name = "pause"
+    _description = "приостанавливает симуляцию"
+    _owner_only = True
+
+    def on_call(self, data: dict, args: dict, methods: BotMethods) -> None:
+        from core.application import Application
+        if Application.set_paused(True):
+            methods.broadcast_message("Симуляция приостановлена.")
+
+
+class UnpauseCommand(BaseCommand):
+    _name = "unpause"
+    _description = "возобновляет симуляцию"
+    _owner_only = True
+
+    def on_call(self, data: dict, args: dict, methods: BotMethods) -> None:
+        from core.application import Application
+        if Application.set_paused(False):
+            methods.broadcast_message("Симуляция возобновлена.")
+
+
+class BroadcastCommand(BaseCommand):
+    _name = "broadcast"
+    _description = "отправляет {сообщение} всем участникам сообщества"
+    _owner_only = True
+    _event_data = ("peer_id",)
+    _args = (("сообщение", str),)
+
+    def on_call(self, data: dict, args: dict, methods: BotMethods) -> None:
+        bc_id = str(data["peer_id"])
+        message = args["сообщение"]
+        try:
+            methods.broadcast_message(message, (bc_id,))
+            methods.send_message(bc_id, "Сообщения отправлены.")
+        except:
+            methods.send_message(bc_id, "Что-то пошло не так.")

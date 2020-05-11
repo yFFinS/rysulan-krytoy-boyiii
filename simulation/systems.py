@@ -70,7 +70,6 @@ class MouseDragSystem(BaseSystem):
 
 
 class EntityNameFollowSystem(BaseSystem):
-
     __update_order__ = 102
 
     def __init__(self):
@@ -95,16 +94,22 @@ class EntityNameFollowSystem(BaseSystem):
         for i in self.query(self.filter):
             name = i.get_component(EntityName).value
             if i.get_component(DeadTag) is not None:
-                self.__cache[name].kill()
-                self.__cache.pop(name)
+                try:
+                    self.__cache[name].kill()
+                    self.__cache.pop(name)
+                except KeyError:
+                    pass
                 continue
             name_sprite = self.__cache.get(name, None)
             if name_sprite is None:
-                text = self.__font.render(name, True, NAME_COLOR)
-                name_sprite = sprite.Sprite(self.__sprites)
-                name_sprite.image = text
-                name_sprite.rect = text.get_rect()
-                self.__cache[name] = name_sprite
+                try:
+                    text = self.__font.render(name, True, NAME_COLOR)
+                    name_sprite = sprite.Sprite(self.__sprites)
+                    name_sprite.image = text
+                    name_sprite.rect = text.get_rect()
+                    self.__cache[name] = name_sprite
+                except:
+                    continue
             pos = i.get_component(Position).value
             name_sprite.rect.center = (pos + self.__name_offset - self.__render_system.camera_position).to_tuple()
         self.__sprites.draw(self.__render_surface)
@@ -126,8 +131,8 @@ class MoveToTargetSystem(BaseSystem):
             if target_pos_comp.value is not None:
                 target_pos = target_pos_comp.value
                 pos = pos_comp.value
-                if (target_pos - pos).sqr_len() > 4:
-                    speed = i.get_component(MoveSpeed).value
+                speed = i.get_component(MoveSpeed).value
+                if (target_pos - pos).sqr_len() > speed * 0.5:
                     pos += (target_pos - pos).normalized() * (speed * delta_time)
                 else:
                     pos_comp.value = Vector.clone(target_pos)
@@ -137,7 +142,7 @@ class MoveToTargetSystem(BaseSystem):
 class CreateFood(BaseSystem):
 
     def __init__(self):
-        self.time = 3
+        self.time = 0
         self.filter = None
 
     def on_create(self) -> None:
@@ -147,7 +152,8 @@ class CreateFood(BaseSystem):
         self.time += delta_time
         if self.time >= FOOD_CREATE_DELAY:
             if len(self.query(self.filter)) <= MAX_FOOD:
-                self.entity_manager.add_command(create_food, self.entity_manager, self.entity_manager.create_entity())
+                for i in range(5):
+                    self.entity_manager.add_command(create_food, self.entity_manager, self.entity_manager.create_entity())
                 self.time = 0
 
 
@@ -158,7 +164,7 @@ class HungerSystem(BaseSystem):
         self.filter = None
 
     def on_create(self) -> None:
-        self.filter = self.entity_manager.create_filter(required=(Hunger,), additional=(MoveSpeed, Priority),
+        self.filter = self.entity_manager.create_filter(required=(Hunger, Health), additional=(MoveSpeed,),
                                                         without=(DeadTag,))
 
     def on_update(self, delta_time: float) -> None:
@@ -170,12 +176,11 @@ class HungerSystem(BaseSystem):
                 hunger_comp.value -= 1
                 if speed_comp is not None:
                     hunger_comp.value -= speed_comp.value * SPEED_HUNGER_MULTIPLIER
-                if hunger_comp.value <= EXTREME_HUNGER_VALUE:
-                    priority_comp = i.get_component(Priority)
-                    if priority_comp:
-                        priority_comp.value = 'gathering'
                 if hunger_comp.value <= 0:
-                    self.entity_manager.add_component(i.entity, DeadTag())
+                    hp_comp = i.get_component(Health)
+                    hp_comp.value *= 0.9
+                    hp_comp.value -= 10
+                    hunger_comp.value = 0
 
             self.hunger_time = 0
 
@@ -183,7 +188,6 @@ class HungerSystem(BaseSystem):
 class GatheringSystem(BaseSystem):
 
     def __init__(self):
-        self.gathering_time = 1
         self.filter = None
         self.filter2 = None
 
@@ -195,41 +199,37 @@ class GatheringSystem(BaseSystem):
                                                          without=(DeadTag,))
 
     def on_update(self, delta_time: float) -> None:
-        self.gathering_time += delta_time
-        if self.gathering_time >= 1:
-            bush_pos = []
-            for i in self.query(self.filter2):
-                bush_pos_comp = i.get_component(Position)
-                bush_pos.append((i.entity, bush_pos_comp.value))
-            if not bush_pos:
-                return
-            for i in self.query(self.filter):
-                priority = i.get_component(Priority)
-                if priority is not None and priority.value != "gathering":
-                    continue
-                creature_pos_comp = i.get_component(Position)
-                creature_target_comp = i.get_component(TargetPosition)
-                hp_comp = i.get_component(Health)
-                closest_bush = bush_pos[0]
-                for j in bush_pos:
-                    if (creature_pos_comp.value - j[1]).sqr_len() < (
-                            creature_pos_comp.value - closest_bush[1]).sqr_len():
-                        closest_bush = j
-                creature_target_comp.value = closest_bush[1]
-                if (creature_target_comp.value - creature_pos_comp.value).sqr_len() <= EAT_DISTANCE * EAT_DISTANCE:
-                    hunger_comp = i.get_component(Hunger)
-                    hunger_comp.value += BUSH_FOOD_VALUE
-                    if hp_comp is not None:
-                        hp_comp.value += BUSH_FOOD_VALUE
-                    self.entity_manager.add_component(closest_bush[0], DeadTag())
-            self.gathering_time = 0
+        bush_pos = []
+        for i in self.query(self.filter2):
+            bush_pos_comp = i.get_component(Position)
+            bush_pos.append((i.entity, bush_pos_comp.value))
+        if not bush_pos:
+            return
+        for i in self.query(self.filter):
+            priority = i.get_component(Priority)
+            if priority is not None and priority.current != "gathering":
+                continue
+            creature_pos_comp = i.get_component(Position)
+            creature_target_comp = i.get_component(TargetPosition)
+            hp_comp = i.get_component(Health)
+            closest_bush = bush_pos[0]
+            for j in bush_pos:
+                if (creature_pos_comp.value - j[1]).sqr_len() < (
+                        creature_pos_comp.value - closest_bush[1]).sqr_len():
+                    closest_bush = j
+            creature_target_comp.value = closest_bush[1]
+            if (creature_target_comp.value - creature_pos_comp.value).sqr_len() <= EAT_DISTANCE * EAT_DISTANCE:
+                hunger_comp = i.get_component(Hunger)
+                hunger_comp.value += BUSH_FOOD_VALUE
+                if hp_comp is not None:
+                    hp_comp.value += BUSH_FOOD_VALUE
+                self.entity_manager.add_component(closest_bush[0], DeadTag())
 
 
 class HuntingSystem(BaseSystem):
 
     def __init__(self):
         self.filter = None
-        self.hunting_time = 1
 
     def on_create(self) -> None:
         self.filter = self.entity_manager.create_filter(required=(Position, TargetPosition, Hunger, Strength, Health),
@@ -237,34 +237,60 @@ class HuntingSystem(BaseSystem):
                                                         without=(DeadTag,))
 
     def on_update(self, delta_time: float) -> None:
-        self.hunting_time += delta_time
-        if self.hunting_time >= 1:
-            creatures = tuple(self.query(self.filter))
-            for i in creatures:
-                priority_comp = i.get_component(Priority)
-                if priority_comp is not None and priority_comp.value != 'hunting':
+        creatures = tuple(self.query(self.filter))
+        for i in creatures:
+            priority_comp = i.get_component(Priority)
+            if priority_comp is not None and priority_comp.current != 'hunting':
+                continue
+            hp_comp = i.get_component(Health)
+            if hp_comp.value < 100:
+                continue
+
+            pos_comp = i.get_component(Position)
+            target_comp = i.get_component(TargetPosition)
+            strength = i.get_component(Strength).value
+
+            closest_pos = creatures[0].get_component(Position).value
+
+            for j in creatures:
+                if j == i:
                     continue
-                hp_comp = i.get_component(Health)
-                if hp_comp.value < 100:
-                    continue
+                pos = j.get_component(Position).value
 
-                pos_comp = i.get_component(Position)
-                target_comp = i.get_component(TargetPosition)
-                strength = i.get_component(Strength).value
+                if (pos_comp.value - pos).sqr_len() < (pos_comp.value - closest_pos).sqr_len() \
+                        and j.get_component(Health).value / strength \
+                        >= hp_comp.value / j.get_component(Strength).value:
+                    closest_pos = pos
+            target_comp.value = closest_pos
 
-                closest_pos = creatures[0].get_component(Position).value
 
-                for j in creatures:
-                    if j == i:
-                        continue
-                    pos = j.get_component(Position).value
+class PriorityControlSystem(BaseSystem):
 
-                    if (pos_comp.value - pos).sqr_len() < (pos_comp.value - closest_pos).sqr_len()\
-                            and j.get_component(Health).value / strength\
-                            >= hp_comp.value / j.get_component(Strength).value:
-                        closest_pos = pos
-                target_comp.value = closest_pos
-            self.hunting_time = 0
+    def __init__(self):
+        self.filter = None
+
+    def on_create(self) -> None:
+        self.filter = self.entity_manager.create_filter(required=(Priority, Hunger, Health, MoveSpeed),
+                                                        without=(DeadTag,))
+
+    def on_update(self, delta_time: float) -> None:
+        for i in self.query(self.filter):
+            hunger = i.get_component(Hunger).value
+            hp = i.get_component(Health).value
+            priority_comp = i.get_component(Priority)
+            speed_comp = i.get_component(MoveSpeed)
+            if priority_comp.target == "hunting":
+                if priority_comp.current == "hunting":
+                    speed_comp.value += delta_time * 0.02
+                else:
+                    speed_comp.value = max(1.5, speed_comp.value - delta_time * 0.002)
+
+            if hunger < EXTREME_HUNGER_VALUE:
+                priority_comp.current = "gathering"
+            elif hp < EXTREME_HP_VALUE:
+                priority_comp.current = "safety"
+            else:
+                priority_comp.current = priority_comp.target
 
 
 class PositionLimitSystem(BaseSystem):
@@ -288,17 +314,20 @@ class CollisionSystem(BaseSystem):
     def __init__(self):
         self.filter = None
         self.simplification_value = 10
+        self.simp_offset = ceil(START_CREATURE_SIZE / self.simplification_value)
+        self.simp_offsets = tuple(Vector(x, y) * self.simplification_value
+                                  for x in range(-self.simp_offset, self.simp_offset + 1)
+                                  for y in range(-self.simp_offset, self.simp_offset + 1))
 
     def on_create(self) -> None:
         self.filter = self.entity_manager.create_filter(required=(Position, Rigidbody),
-                                                        additional=(Strength, Health, Team, Hunger))
+                                                        additional=(Strength, Health, Team, Hunger, Priority))
 
     def on_update(self, delta_time: float) -> None:
         colliders = dict()
-
+        creatures = []
         for i in self.query(self.filter):
             rigidbody_comp = i.get_component(Rigidbody)
-            radius = rigidbody_comp.radius
             vel = rigidbody_comp.velocity
             strength_comp = i.get_component(Strength)
             strength = strength_comp.value if strength_comp is not None else 1
@@ -310,37 +339,45 @@ class CollisionSystem(BaseSystem):
             position = i.get_component(Position).value
             simplified_pos = Vector(round(position.x) // self.simplification_value * self.simplification_value,
                                     round(position.y) // self.simplification_value * self.simplification_value)
-            simp_offset = ceil(radius / self.simplification_value)
-            simp_offsets = tuple(Vector(x, y) * self.simplification_value for x in range(-simp_offset, simp_offset + 1)
-                                 for y in range(-simp_offset, simp_offset + 1))
-            for key in map(lambda x: x + simplified_pos, simp_offsets):
+            colliders[simplified_pos] = colliders.get(simplified_pos, [])
+            colliders[simplified_pos].append((i.entity, position, vel, strength, health_comp, team))
+            creatures.append(i)
+
+        for i in creatures:
+            rigidbody_comp = i.get_component(Rigidbody)
+            radius = rigidbody_comp.radius
+            vel = rigidbody_comp.velocity
+            strength_comp = i.get_component(Strength)
+            strength = strength_comp.value if strength_comp is not None else 0
+            health_comp = i.get_component(Health)
+
+            team_comp = i.get_component(Team)
+            team = team_comp.value if team_comp is not None else 0
+
+            position = i.get_component(Position).value
+            for key in map(lambda x: x + simplified_pos, self.simp_offsets):
                 res = colliders.get(key, None)
                 if res is None:
                     continue
                 for ent, other_position, other_vel, other_strength, other_hp, other_team in res:
+                    if ent == i.entity:
+                        continue
                     diff = other_position - position
-                    direction = diff.normalized()
-                    vel -= direction * (PUSH_MULTIPLIER * other_strength) \
+                    if diff.sqr_len() > 4 * radius * radius:
+                        continue
+                    vel -= diff * (PUSH_MULTIPLIER * PUSH_MULTIPLIER * other_strength) \
                            + Vector(0.5 - random(), 0.5 - random()) * 0.1
-                    other_vel += direction * (PUSH_MULTIPLIER * strength) \
-                                 + Vector(0.5 - random(), 0.5 - random()) * 0.1
 
                     if team != other_team:
-                        if health_comp is not None:
-                            health_comp.value -= other_strength
-                            if health_comp.value <= 0:
-                                self.entity_manager.add_component(i.entity, DeadTag())
-
                         if other_hp is not None:
-                            other_hp.value -= strength
+                            p_comp = i.get_component(Priority)
+                            mult = strength * strength if p_comp is not None and p_comp.current == "hunting" else 1
+                            other_hp.value -= strength * DAMAGE_MULTIPLIER * mult
                             if other_hp.value <= 0:
                                 hunger_comp = i.get_component(Hunger)
                                 hunger_comp.value += MEAT_FOOD_VALUE
                                 health_comp.value += KILL_TREATMENT
                                 self.entity_manager.add_component(ent, DeadTag())
-
-            colliders[simplified_pos] = colliders.get(simplified_pos, [])
-            colliders[simplified_pos].append((i.entity, position, vel, strength, health_comp, team))
 
         for arr in colliders.values():
             for pos, vel in map(lambda x: (x[1], x[2]), arr):
@@ -388,7 +425,7 @@ class MouseHoverInfoSystem(BaseSystem):
     def on_create(self) -> None:
         from core.application import Application
         self.filter = self.entity_manager.create_filter(required=(Position,),
-                                                        additional=(MoveSpeed, Hunger, Strength, Health))
+                                                        additional=(MoveSpeed, Hunger, Strength, Health, Priority))
         self.__render_system = World.current_world.get_or_create_system(RenderSystem)
         self.__font = pygame.font.Font(None, 30)
         self.__render_surface = Application.get_render_surface()
@@ -413,6 +450,9 @@ class MouseHoverInfoSystem(BaseSystem):
                 text.append(f"Position: ({rx}, {ry})")
                 if comp is not None:
                     text.append(f"Speed: {'%.2f' % comp.value}")
+                comp = i.get_component(Priority)
+                if comp is not None:
+                    text.append(f"Priority: {comp.current}")
                 comp = i.get_component(Hunger)
                 if comp is not None:
                     text.append(f"Hunger: {'%.2f' % comp.value}")
@@ -463,12 +503,24 @@ class KillSystem(BaseSystem):
     def on_create(self) -> None:
         from vk_bot.commands import BotMethods
         self.__methods = BotMethods
-        self.filter = self.entity_manager.create_filter(required=(DeadTag,), additional=(UserId,))
+        self.filter = self.entity_manager.create_filter(additional=(UserId, Health, DeadTag, LifeTime))
 
     def on_update(self, delta_time: float) -> None:
         to_kill = set()
         for i in self.query(self.filter):
-            to_kill.add(i.entity)
+            if i.get_component(DeadTag):
+                to_kill.add(i.entity)
+            else:
+                hp_comp = i.get_component(Health)
+                if hp_comp is not None and hp_comp.value <= 0:
+                    self.entity_manager.add_component(i.entity, DeadTag())
+                else:
+                    t_comp = i.get_component(LifeTime)
+                    if t_comp is not None:
+                        t_comp.value += delta_time
+                        if t_comp.value >= 600:
+                            self.entity_manager.add_component(i.entity, DeadTag())
+
         self.entity_manager.add_command(self.__kill, to_kill)
 
     def __kill(self, entities) -> None:
@@ -500,7 +552,7 @@ class BotCreationSystem(BaseSystem):
                               "Bot" + str(entity.get_id()), randint(0, len(TEAM_COLORS) - 1))
 
 
-class BackupSystem(BaseSystem):
+class SaveSystem(BaseSystem):
 
     def __init__(self):
         from sql.data import save_to_database
@@ -509,7 +561,68 @@ class BackupSystem(BaseSystem):
 
     def on_update(self, delta_time: float) -> None:
         self.time += delta_time
-        if self.time >= BACKUP_DELAY:
+        if self.time >= SAVE_DELAY:
             self.backup_func()
-            print("saved")
+            self.time = 0
+
+
+class RunAwaySystem(BaseSystem):
+    __update_order__ = 50
+
+    def __init__(self):
+        self.filter = None
+        self.filter2 = None
+
+    def on_create(self) -> None:
+        self.filter = self.entity_manager.create_filter(required=(Priority, Position, TargetPosition, Team))
+        self.filter2 = self.entity_manager.create_filter(required=(Position, Team))
+
+    def on_update(self, delta_time: float) -> None:
+        team_clusters = {team: [0, Vector(0, 0)] for team in range(len(TEAM_COLORS))}
+        creatures = self.query(self.filter)
+        for i in self.query(self.filter2):
+            team = i.get_component(Team).value
+            team_clusters[team][0] += 1
+            team_clusters[team][1] += i.get_component(Position).value
+        average_spots = {team: val[1] / val[0] for team, val in team_clusters.items() if val[0] != 0}
+        for i in creatures:
+            if i.get_component(Priority).current != "safety":
+                continue
+            team = i.get_component(Team).value
+            avg_target_pos = average_spots[team]
+
+            i.get_component(TargetPosition).value = Vector.clone(avg_target_pos)
+
+
+class ReproduceSystem(BaseSystem):
+
+    def __init__(self):
+        self.filter = None
+        self.time = 0
+
+    def on_create(self) -> None:
+        self.filter = self.entity_manager.create_filter(required=(Team, MoveSpeed, Strength, Health, Position))
+
+    def on_update(self, delta_time: float) -> None:
+        self.time += delta_time
+        if self.time >= REPRODUCE_DELAY:
+            count = 0
+            for i in self.query(self.filter):
+                count += 1
+                if random() > 0.2:
+                    continue
+                if count >= MAX_CREATURES:
+                    break
+                count += 1
+                entity = self.entity_manager.create_entity()
+                create_named_creature(self.entity_manager, entity, "Bot" + str(entity.get_id()),
+                                      i.get_component(Team).value)
+                speed_comp = self.entity_manager.get_component(entity, MoveSpeed)
+                speed_comp.value = max(1.5, i.get_component(MoveSpeed).value * (0.5 - random()) * 5)
+                str_comp = self.entity_manager.get_component(entity, Strength)
+                str_comp.value = max(1, i.get_component(Strength).value * (0.5 - random()) * 4)
+                hp_comp = self.entity_manager.get_component(entity, Health)
+                hp_comp.value = max(200, i.get_component(Health).value * (0.5 - random()) * 13)
+                pos_comp = self.entity_manager.get_component(entity, Position)
+                pos_comp.value = Vector.clone(i.get_component(Position).value)
             self.time = 0

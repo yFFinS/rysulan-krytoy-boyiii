@@ -69,7 +69,13 @@ def create_creature(entity_manager: EntityManager, entity: Entity, team: int = -
     hp_comp.value = randint(50, 151)
 
     priority_comp = Priority()
-    priority_comp.value = 'gathering'
+    if random() < 0.5:
+        priority_comp.target = "gathering"
+    else:
+        priority_comp.target = "hunting"
+    priority_comp.current = "gathering"
+    time_comp = LifeTime()
+    time_comp.value = 0
 
     entity_manager.add_component(entity, pos_comp)
     entity_manager.add_component(entity, render_comp)
@@ -81,6 +87,7 @@ def create_creature(entity_manager: EntityManager, entity: Entity, team: int = -
     entity_manager.add_component(entity, hp_comp)
     entity_manager.add_component(entity, priority_comp)
     entity_manager.add_component(entity, team_comp)
+    entity_manager.add_component(entity, time_comp)
 
 
 def create_food(entity_manager: EntityManager, entity: Entity) -> None:

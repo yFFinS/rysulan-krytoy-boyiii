@@ -10,7 +10,7 @@ BACKGROUND_COLOR = (102, 102, 51)
 
 
 class Application:
-    __slots__ = ("__screen", "__is_running", "__clock", "__pr_commands")
+    __slots__ = ("__screen", "__is_running", "__clock", "__pr_commands", "__is_paused")
     __instance: "Application" = None
 
     def __init__(self):
@@ -25,10 +25,14 @@ class Application:
         self.__screen: pygame.Surface = pygame.display.set_mode((WIDTH, HEIGHT), pygame.DOUBLEBUF)
         self.__clock = pygame.time.Clock()
         self.__pr_commands = []
+        self.__is_paused = False
 
         World.default_world = World()
 
     def run(self, profile=False, clear_log=False) -> None:
+        from vk_bot.commands import BotMethods
+        BotMethods.broadcast_message("Мы онлайн.")
+
         Profiler.begin_profile_session()
         World.default_world.create_all_systems()
         self.__is_running = True
@@ -37,8 +41,6 @@ class Application:
         Time.tick()
 
         while self.__is_running:
-            self.__screen.fill(BACKGROUND_COLOR)
-
             events_found = False
             for event in pygame.event.get():
                 events_found = True
@@ -48,6 +50,11 @@ class Application:
                     break
             if not events_found:
                 Mouse.handle_event(None)
+
+            if self.__is_paused:
+                continue
+
+            self.__screen.fill(BACKGROUND_COLOR)
             World.update_current()
 
             Time.tick()
@@ -78,3 +85,17 @@ class Application:
     def add_post_render_command(command) -> None:
         Application.__instance.__pr_commands.append(command)
 
+    @staticmethod
+    def terminate() -> None:
+        from vk_bot.commands import BotMethods
+        from time import sleep
+        import os
+        BotMethods.broadcast_message("Мы оффлайн.")
+        sleep(0.2)
+        os._exit(0)
+
+    @staticmethod
+    def set_paused(value: bool) -> bool:
+        result = Application.__instance.__is_paused != value
+        Application.__instance.__is_paused = value
+        return result

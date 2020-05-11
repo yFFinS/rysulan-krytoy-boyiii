@@ -109,17 +109,21 @@ class MoveSpeed(BaseComponent):
 
 
 class Priority(BaseComponent):
-    __slots__ = ("value",)
-    sql_priority = sa.Column(sa.String, name="priority")
+    __slots__ = ("current", "target")
+    sql_current = sa.Column(sa.String, name="current", nullable=True)
+    sql_target = sa.Column(sa.String, name="target", nullable=True)
 
     def __init__(self):
-        self.value = None
+        self.current = None
+        self.target = None
 
     def from_database(self, entity_manager: EntityManager) -> None:
-        self.value = self.sql_priority
+        self.current = self.sql_current
+        self.target = self.sql_target
 
     def to_database(self) -> None:
-        self.sql_priority = self.value
+        self.sql_current = self.current
+        self.sql_target = self.target
 
 
 class Strength(BaseComponent):
@@ -194,3 +198,17 @@ class Team(BaseComponent):
 
 class DeadTag(BaseComponent):
     pass
+
+
+class LifeTime(BaseComponent):
+    __slots__ = ("value",)
+    sql_time = sa.Column(sa.Float, name="time")
+
+    def __init__(self):
+        self.value = 0
+
+    def to_database(self) -> None:
+        self.sql_time = self.value
+
+    def from_database(self, entity_manager) -> None:
+        self.value = self.sql_time

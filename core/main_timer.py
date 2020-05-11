@@ -2,7 +2,7 @@ from pygame.time import Clock
 from time import time
 
 
-TARGET_FPS = 100
+TARGET_FPS = 30
 
 
 class Time:
