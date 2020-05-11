@@ -328,3 +328,42 @@ class BroadcastCommand(BaseCommand):
             methods.send_message(bc_id, "Сообщения отправлены.")
         except:
             methods.send_message(bc_id, "Что-то пошло не так.")
+
+
+class SetPriorityCommand(BaseCommand):
+    _name = "priority"
+    _description = "устанавливает приоритет {0: еда, 1: охота} существа {номер существа}"
+    _args = (("номер существа", int), ("приоритет", int))
+    _event_data = ("peer_id",)
+
+    def on_call(self, data: dict, args: dict, methods: BotMethods) -> None:
+        user_id = data["peer_id"]
+        entity_manager = World.default_world.get_manager()
+
+        num = args["номер существа"]
+        try:
+            from simulation.components import UserId, Priority
+            from simulation.math import Vector
+            from ecs.entities import EntityNotFoundError
+
+            try:
+                entity = entity_manager.get_entity(num)
+                id_comp = entity_manager.get_component(entity, UserId)
+
+                if id_comp.value != str(user_id):
+                    raise EntityNotFoundError()
+
+                p_comp = entity_manager.get_component(entity, Priority)
+                if args["приоритет"] == 0:
+                    p_comp.target = "gathering"
+                elif args["приоритет"] == 1:
+                    p_comp.target = "hunting"
+                else:
+                    methods.send_message(user_id, "Ошибка ввода.")
+                    return
+
+                methods.send_message(user_id, "Сделано.")
+            except:
+                methods.send_message(user_id, "Существо не найдено.")
+        except:
+            methods.send_message(user_id, "Что-то пошло не так.")

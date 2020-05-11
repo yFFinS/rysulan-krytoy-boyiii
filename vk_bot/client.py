@@ -1,4 +1,4 @@
-from vk_api import vk_api, VkApi
+from vk_api import VkApi
 from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType, VkBotEvent
 from vk_bot.commands import *
 from typing import Dict, TypeVar
@@ -23,7 +23,7 @@ class Client:
     def __init__(self):
         if not exists(PROPERTIES_FILE_PATH):
             with open(PROPERTIES_FILE_PATH, "w") as file:
-                file.write("token=\ngroup_id=\n# AAAAAAA; BBBBBBBBB; CCCCCCCC\nowner_ids")
+                file.write("token=\ngroup_id=\n# AAAAAAA; BBBBBBBBB; CCCCCCCC\nowner_ids=")
             print("You need to set bot properties.")
             exit(0)
         with open(PROPERTIES_FILE_PATH, "r") as file:
