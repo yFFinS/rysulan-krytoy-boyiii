@@ -77,7 +77,7 @@ class Client:
     def __help_command(self, event) -> None:
         message_data = []
         for command in self.__commands.values():
-            if command.is_owner_only() and event.obj["from_id"] not in self.__owners:
+            if command.is_owner_only() and str(event.obj["from_id"]) not in self.__owners:
                 continue
             message_data.append(command.help_data())
         self.__methods.send_message(event.obj["peer_id"], "\n".join(message_data))
