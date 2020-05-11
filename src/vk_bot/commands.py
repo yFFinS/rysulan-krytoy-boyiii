@@ -428,9 +428,8 @@ class Top10Command(BaseCommand):
                 top10.append(ent_data)
             else:
                 min_time = min(top10, key=lambda x: x[0])
-                to_rem = None
                 for t in range(len(top10)):
-                    if top10[t][0] == min_time:
+                    if top10[t] == min_time:
                         top10[t] = ent_data
                         break
         top10.sort(key=lambda x: x[0], reverse=True)
