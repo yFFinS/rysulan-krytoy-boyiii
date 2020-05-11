@@ -151,11 +151,12 @@ class CreateFood(BaseSystem):
     def on_update(self, delta_time: float) -> None:
         self.time += delta_time
         if self.time >= FOOD_CREATE_DELAY:
-            if len(self.query(self.filter)) <= MAX_FOOD:
-                for i in range(5):
+            print(len(self.query(self.filter)))
+            if len(self.query(self.filter)) <= MAX_FOOD - 4:
+                for i in range(4):
                     self.entity_manager.add_command(create_food, self.entity_manager,
                                                     self.entity_manager.create_entity())
-                self.time = 0
+            self.time = 0
 
 
 class HungerSystem(BaseSystem):
