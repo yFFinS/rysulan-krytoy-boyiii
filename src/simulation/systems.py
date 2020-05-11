@@ -563,7 +563,7 @@ class KillSystem(BaseSystem):
             try:
                 self.entity_manager.kill_entity(i.entity)
             except EntityNotFoundError:
-                pass
+                continue
 
 
 class LifeTimeSystem(BaseSystem):
