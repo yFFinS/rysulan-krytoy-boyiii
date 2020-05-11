@@ -56,17 +56,17 @@ def create_creature(entity_manager: EntityManager, entity: Entity, team: int = -
     move_speed_comp.value = randint(3, 13)
 
     hunger_comp = Hunger()
-    hunger_comp.value = randint(40, 75)
+    hunger_comp.value = randint(60, 140)
 
     rb_comp = Rigidbody()
     rb_comp.radius = START_CREATURE_SIZE
     rb_comp.velocity = Vector(0, 0)
 
     str_comp = Strength()
-    str_comp.value = randint(1, 7)
+    str_comp.value = randint(2, 7)
 
     hp_comp = Health()
-    hp_comp.value = randint(50, 151)
+    hp_comp.value = randint(100, 200)
 
     priority_comp = Priority()
     if random() < 0.5:
