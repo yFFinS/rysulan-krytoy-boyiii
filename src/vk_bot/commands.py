@@ -78,6 +78,8 @@ class BotMethods:
                 text += result[0]["last_name"]
         except:
             pass
+        if text.strip() == "DELETED":
+            text = "беседа"
         return text
 
 
