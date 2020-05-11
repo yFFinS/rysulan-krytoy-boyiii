@@ -61,13 +61,14 @@ class Client:
         return text[0] if text else ""
 
     def __process_command(self, event: VkBotEvent) -> None:
-        name = self.__get_command(event)
+        name = self.__get_command(event).lower()
         if name == "help":
             self.__help_command(event)
             return
         command = self.__commands.get(name, None)
         if command is not None:
             if command.is_owner_only() and str(event.obj["from_id"]) not in self.__owners:
+                self.__methods.send_message(event.obj["peer_id"], "Это команда только для администраторов.")
                 return
             try:
                 command.on_call(command.filter_data(event.obj), command.parse_args(event.obj["text"]), self.__methods)
