@@ -63,24 +63,24 @@ class Client:
     def __process_command(self, event: VkBotEvent) -> None:
         name = self.__get_command(event)
         if name == "help":
-            self.__help_command(str(event.obj["peer_id"]))
+            self.__help_command(event)
             return
         command = self.__commands.get(name, None)
         if command is not None:
-            if command.is_owner_only() and str(event.obj["peer_id"]) not in self.__owners:
+            if command.is_owner_only() and str(event.obj["from_id"]) not in self.__owners:
                 return
             try:
                 command.on_call(command.filter_data(event.obj), command.parse_args(event.obj["text"]), self.__methods)
             except BaseException as e:
                 self.__methods.send_message(str(event.obj["peer_id"]), str(e))
 
-    def __help_command(self, peer_id: str) -> None:
+    def __help_command(self, event) -> None:
         message_data = []
         for command in self.__commands.values():
-            if command.is_owner_only() and peer_id not in self.__owners:
+            if command.is_owner_only() and event.obj["from_id"] not in self.__owners:
                 continue
             message_data.append(command.help_data())
-        self.__methods.send_message(peer_id, "\n".join(message_data))
+        self.__methods.send_message(event.obj["peer_id"], "\n".join(message_data))
 
 
 def init():

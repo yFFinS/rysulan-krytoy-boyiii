@@ -3,6 +3,7 @@ from random import randint
 from typing import Tuple
 import requests
 import json
+from vk_api import ApiError
 
 from src.ecs.world import World
 
@@ -21,7 +22,11 @@ class BotMethods:
 
     @staticmethod
     def send_message(peer_id: str, message: str) -> None:
-        BotMethods.__instance.__api.messages.send(peer_id=peer_id, message=message, random_id=BotMethods.random_id())
+        try:
+            BotMethods.__instance.__api.messages.send(peer_id=peer_id,
+                                                      message=message, random_id=BotMethods.random_id())
+        except ApiError as e:
+            print(f"Can't send message to {peer_id}. Reason: {e}.")
 
     @staticmethod
     def random_id() -> str:
@@ -78,9 +83,7 @@ class BotMethods:
                 text += result[0]["last_name"]
         except:
             pass
-        if text.strip() == "DELETED":
-            text = "беседа"
-        return text
+        return text.strip()
 
 
 class BaseCommand(ABC):
@@ -145,7 +148,7 @@ class BaseCommand(ABC):
 
 class CreateEntitiesCommand(BaseCommand):
     _name = "create"
-    _event_data = ("peer_id",)
+    _event_data = ("from_id", "peer_id")
     _args = (("число", int),)
     _description = "создает {число} существ"
     _owner_only = True
@@ -174,7 +177,7 @@ class CreateEntitiesCommand(BaseCommand):
 
 class CreateUserEntityCommand(BaseCommand):
     _name = "creature"
-    _event_data = ("peer_id",)
+    _event_data = ("from_id", "peer_id")
     _args = (("имя", str),)
     _description = "создает существо с именем {имя}"
 
@@ -189,7 +192,7 @@ class CreateUserEntityCommand(BaseCommand):
             entity = entity_manager.create_entity()
             create_named_creature(entity_manager, entity, name, randint(0, len(TEAM_COLORS)))
             id_comp = UserId()
-            id_comp.value = str(data["peer_id"])
+            id_comp.value = str(data["from_id"])
             entity_manager.add_component(entity, id_comp)
 
             methods.send_message(data["peer_id"], f"Существо создано. Его номер — {entity.get_id()}.")
@@ -200,10 +203,11 @@ class CreateUserEntityCommand(BaseCommand):
 class ListCommand(BaseCommand):
     _name = "list"
     _description = "выводит список всех ваших существ"
-    _event_data = ("peer_id",)
+    _event_data = ("from_id", "peer_id")
 
     def on_call(self, data: dict, args: dict, methods: BotMethods) -> None:
-        user_id = data["peer_id"]
+        user_id = data["from_id"]
+        peer_id = data["peer_id"]
         entity_manager = World.current_world.get_manager()
         message = []
         try:
@@ -218,19 +222,20 @@ class ListCommand(BaseCommand):
                     continue
             if not message:
                 message.append("У вас нет существ, создайте одно с помощью команды creature.")
-            methods.send_message(user_id, "\n".join(message))
+            methods.send_message(peer_id, "\n".join(message))
         except:
-            methods.send_message(user_id, "Что-то пошло не так.")
+            methods.send_message(peer_id, "Что-то пошло не так.")
 
 
 class StatsCommand(BaseCommand):
     _name = "stats"
     _description = "показывает характеристики вашего существа"
     _args = (("номер существа", int),)
-    _event_data = ("peer_id",)
+    _event_data = ("from_id", "peer_id")
 
     def on_call(self, data: dict, args: dict, methods: BotMethods) -> None:
-        user_id = data["peer_id"]
+        user_id = data["from_id"]
+        peer_id = data["peer_id"]
         entity_manager = World.default_world.get_manager()
         message = []
 
@@ -266,22 +271,23 @@ class StatsCommand(BaseCommand):
                     message.append(f"Действие:"
                                    f" {'ест' if v == 'gathering' else 'охотится' if v == 'hunting' else 'убегает'}.")
 
-                methods.send_message(user_id, "\n".join(message))
+                methods.send_message(peer_id, "\n".join(message))
             except:
-                methods.send_message(user_id, "Существо не найдено.")
+                methods.send_message(peer_id, "Существо не найдено.")
         except:
-            methods.send_message(user_id, "Что-то пошло не так.")
+            methods.send_message(peer_id, "Что-то пошло не так.")
 
 
 class PhotoCommand(BaseCommand):
     _name = "photo"
     _description = "отправляет фото вашего существа"
     _args = (("номер существа", int),)
-    _event_data = ("peer_id",)
+    _event_data = ("from_id", "peer_id")
 
     def on_call(self, data: dict, args: dict, methods: BotMethods) -> None:
         num = args["номер существа"]
-        user_id = data["peer_id"]
+        user_id = data["from_id"]
+        peer_id = data["peer_id"]
         entity_manager = World.current_world.get_manager()
         try:
             from src.simulation.components import UserId, Position
@@ -302,13 +308,13 @@ class PhotoCommand(BaseCommand):
 
                 def command():
                     save(render_surface, "temp.jpg")
-                    methods.send_photo(user_id, "temp.jpg")
+                    methods.send_photo(peer_id, "temp.jpg")
 
                 Application.add_post_render_command(lambda: entity_manager.add_command(command))
             except:
-                methods.send_message(user_id, "Существо не найдено.")
+                methods.send_message(peer_id, "Существо не найдено.")
         except:
-            methods.send_message(user_id, "Что-то пошло не так.")
+            methods.send_message(peer_id, "Что-то пошло не так.")
 
 
 class PauseCommand(BaseCommand):
@@ -337,27 +343,29 @@ class BroadcastCommand(BaseCommand):
     _name = "broadcast"
     _description = "отправляет {сообщение} всем участникам сообщества"
     _owner_only = True
-    _event_data = ("peer_id",)
+    _event_data = ("from_id", "peer_id")
     _args = (("сообщение", str),)
 
     def on_call(self, data: dict, args: dict, methods: BotMethods) -> None:
-        bc_id = str(data["peer_id"])
+        bc_id = str(data["from_id"])
+        peer_id = data["peer_id"]
         message = args["сообщение"]
         try:
             methods.broadcast_message(message, (bc_id,))
-            methods.send_message(bc_id, "Сообщения отправлены.")
+            methods.send_message(peer_id, "Сообщения отправлены.")
         except:
-            methods.send_message(bc_id, "Что-то пошло не так.")
+            methods.send_message(peer_id, "Что-то пошло не так.")
 
 
 class SetPriorityCommand(BaseCommand):
     _name = "priority"
     _description = "устанавливает приоритет {0: еда, 1: охота} существа {номер существа}"
     _args = (("номер существа", int), ("приоритет", int))
-    _event_data = ("peer_id",)
+    _event_data = ("from_id", "peer_id")
 
     def on_call(self, data: dict, args: dict, methods: BotMethods) -> None:
-        user_id = data["peer_id"]
+        user_id = data["from_id"]
+        peer_id = data["peer_id"]
         entity_manager = World.default_world.get_manager()
 
         num = args["номер существа"]
@@ -382,11 +390,11 @@ class SetPriorityCommand(BaseCommand):
                     methods.send_message(user_id, "Ошибка ввода.")
                     return
 
-                methods.send_message(user_id, "Сделано.")
+                methods.send_message(peer_id, "Сделано.")
             except:
-                methods.send_message(user_id, "Существо не найдено.")
+                methods.send_message(peer_id, "Существо не найдено.")
         except:
-            methods.send_message(user_id, "Что-то пошло не так.")
+            methods.send_message(peer_id, "Что-то пошло не так.")
 
 
 class KillAllCommand(BaseCommand):
@@ -410,7 +418,7 @@ class KillAllCommand(BaseCommand):
 
 class Top10Command(BaseCommand):
     _name = "top10"
-    _event_data = ("peer_id",)
+    _event_data = ("from_id", "peer_id")
     _description = "выводит 10 существ с наибольшей продолжительностью жизни"
 
     def on_call(self, data: dict, args: dict, methods: BotMethods) -> None:
