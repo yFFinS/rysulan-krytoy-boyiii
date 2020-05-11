@@ -4,12 +4,12 @@ from random import random, randint, choice
 import pygame
 
 from src.core.input import Mouse
-from src.ecs.entities import EntityNotFoundError
 from src.ecs.systems import BaseSystem
 from src.ecs.world import World
 from .__all_components import *
 from .settings import *
 from .utils import create_food, create_named_creature, TEAM_COLORS
+from src.ecs.entities import EntityNotFoundError
 
 
 class RenderSystem(BaseSystem):
@@ -358,8 +358,6 @@ class CollisionSystem(BaseSystem):
             rigidbody_comp = i.get_component(Rigidbody)
             radius = rigidbody_comp.radius
             vel = rigidbody_comp.velocity
-            strength_comp = i.get_component(Strength)
-            strength = strength_comp.value if strength_comp is not None else 0
 
             position = i.get_component(Position).value
             for key in map(lambda x: x + simplified_pos, self.simp_offsets):
@@ -551,21 +549,21 @@ class KillSystem(BaseSystem):
         self.entity_manager.add_command(self.__kill, to_kill)
 
     def __kill(self, entities) -> None:
-        try:
-            for i in entities:
-                id_comp = i.get_component(UserId)
-                if id_comp is not None:
-                    name = i.get_component(EntityName).value
-                    message = str(name) + " умер"
-                    res = i.get_component(DeadTag).reason
-                    if not res:
-                        message += ". Жаль!!"
-                    else:
-                        message += " от " + res + ". хд"
-                    self.__methods.send_message(id_comp.value, message)
+        for i in entities:
+            id_comp = i.get_component(UserId)
+            if id_comp is not None:
+                name = i.get_component(EntityName).value
+                message = str(name) + " умер"
+                res = i.get_component(DeadTag).reason
+                if not res:
+                    message += ". Жаль!!"
+                else:
+                    message += " от " + res + ". хд"
+                self.__methods.send_message(id_comp.value, message)
+            try:
                 self.entity_manager.kill_entity(i.entity)
-        except EntityNotFoundError:
-            pass
+            except EntityNotFoundError:
+                pass
 
 
 class LifeTimeSystem(BaseSystem):
