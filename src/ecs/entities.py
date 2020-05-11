@@ -199,8 +199,9 @@ class CommandBuffer:
         for command in self.__commands:
             try:
                 command.execute()
-            except:
+            except BaseException as e:
                 print(f"Error in {command.command.__name__}.")
+                print(e)
         self.__commands.clear()
 
 
