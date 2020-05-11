@@ -302,7 +302,7 @@ class PriorityControlSystem(BaseSystem):
                 priority_comp.current = "safety"
             else:
                 if priority_comp.target == "hunting" and priority_comp.current != "hunting" and \
-                        hunger < EVOLVE_HUNGER_COST - EVOLVE_HUNGER_COST:
+                        hunger < EVOLVE_HUNGER_VALUE - EVOLVE_HUNGER_COST:
                     priority_comp.current = "gathering"
                 else:
                     priority_comp.current = priority_comp.target
@@ -541,7 +541,7 @@ class KillSystem(BaseSystem):
     def on_create(self) -> None:
         from src.vk_bot.commands import BotMethods
         self.__methods = BotMethods
-        self.filter = self.entity_manager.create_filter(required=(DeadTag,), additional=(UserId,))
+        self.filter = self.entity_manager.create_filter(required=(DeadTag,), additional=(UserId, EntityName))
 
     def on_update(self, delta_time: float) -> None:
         to_kill = set()
