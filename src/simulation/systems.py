@@ -505,11 +505,11 @@ class DamageSystem(BaseSystem):
         creatures = []
         for i in self.query(self.filter):
             hp_comp = i.get_component(Health)
-            if hp_comp.value <= 0:
-                self.entity_manager.add_component(i.entity, DeadTag("голода"))
-            elif hp_comp.value <= -10000:
+            if hp_comp.value <= -10000:
                 res = choice(("укуса", "захвата", "царапины", "удара об тумбочку", "солнечного удара"))
                 self.entity_manager.add_component(i.entity, DeadTag(res))
+            elif hp_comp.value <= 0:
+                self.entity_manager.add_component(i.entity, DeadTag("голода"))
             else:
                 strength = i.get_component(Strength).value
                 team = i.get_component(Team).value
