@@ -1,4 +1,4 @@
-from vk_api import VkApi
+from vk_api import VkApi, VkApiError
 from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType, VkBotEvent
 from src.vk_bot.commands import *
 from typing import Dict, TypeVar
@@ -25,19 +25,25 @@ class Client:
             with open(PROPERTIES_FILE_PATH, "w") as file:
                 file.write("token=\ngroup_id=\n# AAAAAAA; BBBBBBBBB; CCCCCCCC\nowner_ids=")
             print("You need to set bot properties.")
+            input("Press enter to close...")
             exit(0)
-        with open(PROPERTIES_FILE_PATH, "r") as file:
-            for line in file.readlines():
-                line_data = line.strip().split("=")
-                if "group_id" in line:
-                    self.__group_id = line_data[-1]
-                if "token" in line:
-                    self.__session = VkApi(token=line_data[-1])
-                if "owner_ids" in line:
-                    self.__owners = tuple(map(str.strip, line_data[-1].split(";")))
-            self.__long_poll = VkBotLongPoll(self.__session, self.__group_id)
-        self.__methods = BotMethods(self.__session, self.__group_id)
-        self.__commands = dict()
+        try:
+            with open(PROPERTIES_FILE_PATH, "r") as file:
+                for line in file.readlines():
+                    line_data = line.strip().split("=")
+                    if "group_id" in line:
+                        self.__group_id = line_data[-1]
+                    if "token" in line:
+                        self.__session = VkApi(token=line_data[-1])
+                    if "owner_ids" in line:
+                        self.__owners = tuple(map(str.strip, line_data[-1].split(";")))
+                self.__long_poll = VkBotLongPoll(self.__session, self.__group_id)
+            self.__methods = BotMethods(self.__session, self.__group_id)
+            self.__commands = dict()
+        except VkApiError:
+            print("Wrong token or group id.")
+            input("Press enter to close...")
+            exit(0)
         for command_type in BaseCommand.__subclasses__():
             command = command_type()
             self.__commands[command.get_name()] = command
