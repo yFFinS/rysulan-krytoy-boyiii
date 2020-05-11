@@ -81,7 +81,6 @@ class BotMethods:
         return text
 
 
-
 class BaseCommand(ABC):
     __slots__ = ()
     _name: str = None
