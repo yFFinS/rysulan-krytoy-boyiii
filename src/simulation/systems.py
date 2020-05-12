@@ -580,7 +580,7 @@ class LifeTimeSystem(BaseSystem):
         for i in self.query(self.filter):
             comp = i.get_component(LifeTime)
             comp.value += delta_time
-            if random() <= comp.value * comp.value / 90000:
+            if random() <= comp.value * comp.value / 9000000:
                 self.entity_manager.add_component(i.entity, DeadTag("тяжёлой жизни"))
 
 
