@@ -601,20 +601,6 @@ class BotCreationSystem(BaseSystem):
                               "Bot" + str(entity.get_id()), randint(0, len(TEAM_COLORS) - 1))
 
 
-class SaveSystem(BaseSystem):
-
-    def __init__(self):
-        from src.sql.data import save_to_database
-        self.time = 0
-        self.backup_func = save_to_database
-
-    def on_update(self, delta_time: float) -> None:
-        self.time += delta_time
-        if self.time >= SAVE_DELAY:
-            self.backup_func()
-            self.time = 0
-
-
 class RunAwaySystem(BaseSystem):
     __update_order__ = 50
 
